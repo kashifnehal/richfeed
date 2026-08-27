@@ -1,0 +1,53 @@
+/**
+ * The Social Queue — shared design tokens.
+ * This file is the ONLY place raw color / radius values are allowed to live.
+ * Every app and component consumes these via the Tailwind preset.
+ */
+:root {
+  /* base surfaces */
+  --sq-bg-app: #F5EFE6;
+  --sq-bg-sidebar: #E8DFCA;
+  --sq-bg-sidebar-hover: #F1E9D8;
+  --sq-bg-surface: #FFFFFF;
+  --sq-border-subtle: #E4D9C4;
+  --sq-border-subtle-2: #EFE8D9;
+
+  /* text */
+  --sq-text-primary: #3A342B;
+  --sq-text-secondary: #8A8073;
+  --sq-text-nav-inactive: #5C5648;
+  --sq-text-on-accent: #FFFFFF;
+
+  /* accent (primary brand blue) */
+  --sq-accent: #6D94C5;
+  --sq-accent-hover: #5C82AF;
+  --sq-accent-muted-bg: #CBDCEB;
+  --sq-accent-muted-text: #3A6E9E;
+
+  /* status colors — text/bg pairs, used ONLY for post/account status, never
+     for anything else */
+  --sq-status-scheduled-text: #3A6E9E;
+  --sq-status-scheduled-bg: #CBDCEB;
+  --sq-status-published-text: #2E7A50;
+  --sq-status-published-bg: #DCEEE1;
+  --sq-status-failed-text: #8C4437;
+  --sq-status-failed-bg: #F5DEDA;
+  --sq-status-needs-reconnect-text: #7A5B1E;
+  --sq-status-needs-reconnect-bg: #F3E4C8;
+  --sq-status-queued-text: #5B4A8C;
+  --sq-status-queued-bg: #E5DEF2;
+
+  /* platform brand colors — used ONLY for platform badges/icons, never for
+     status */
+  --sq-platform-instagram: #D6336C;
+  --sq-platform-facebook: #1877F2;
+  --sq-platform-x: #111111;
+  --sq-platform-linkedin: #0A66C2;
+  --sq-platform-youtube: #E0342B;
+  --sq-platform-tiktok: #111111;
+
+  /* radii */
+  --sq-radius-card: 14px;
+  --sq-radius-control: 10px;
+  --sq-radius-pill: 100px;
+}

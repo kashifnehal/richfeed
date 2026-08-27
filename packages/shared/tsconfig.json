@@ -1,0 +1,4 @@
+{
+  "extends": "@richfeed/config/tsconfig.json",
+  "include": ["src"]
+}

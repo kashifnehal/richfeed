@@ -1,0 +1,19 @@
+{
+  "extends": "@richfeed/config/tsconfig.next.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@richfeed/ui": ["../../packages/ui/index.ts"],
+      "@richfeed/ui/*": ["../../packages/ui/*"],
+      "@richfeed/shared": ["../../packages/shared/src/index.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "global.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
