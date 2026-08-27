@@ -8,15 +8,19 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev worker",
     "build": "turbo run build",
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

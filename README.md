@@ -46,6 +46,19 @@ pnpm dev
 The `/health` route and the web app both start with **no** env vars set — Supabase and Redis
 clients are instantiated lazily and are not used yet in this milestone.
 
+### Where env vars live
+
+| Var | File | Notes |
+| --- | --- | --- |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `API_URL` | `apps/web/.env.local` | anon key only |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `PORT` | `apps/api/.env` | server-only; the service role key bypasses RLS and must never reach `apps/web` |
+
+`SUPABASE_URL` is the same value in both files (dashboard → Project Settings → API); the web app gets
+the **anon** key, the API gets the **service role** key. The web vars are not `NEXT_PUBLIC_`-prefixed,
+so they are readable only from server-side code (route handlers / server components) — if browser-side
+Supabase is added later these need the `NEXT_PUBLIC_` prefix. The API loads `.env` via
+`--env-file-if-exists` in its dev/start scripts, so a missing file is fine but a present one is picked up.
+
 ## Scripts (root)
 
 | Command | Description |
