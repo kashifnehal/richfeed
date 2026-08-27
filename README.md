@@ -50,14 +50,11 @@ clients are instantiated lazily and are not used yet in this milestone.
 
 | Var | File | Notes |
 | --- | --- | --- |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `API_URL` | `apps/web/.env.local` | anon key only |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `PORT` | `apps/api/.env` | server-only; the service role key bypasses RLS and must never reach `apps/web` |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL` | `apps/web/.env.local` | anon key only; `NEXT_PUBLIC_`-prefixed because browser-side Supabase Auth needs them in the client bundle — the anon key is safe to expose, RLS is the real boundary |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `DATABASE_URL`, `PORT` | `apps/api/.env` | server-only; the service role key bypasses RLS and must never reach `apps/web`. `DATABASE_URL` is for one-off admin/migration scripts only (via the session pooler — the direct `db.<ref>.supabase.co` host is IPv6-only and unreachable from many networks) |
 
-`SUPABASE_URL` is the same value in both files (dashboard → Project Settings → API); the web app gets
-the **anon** key, the API gets the **service role** key. The web vars are not `NEXT_PUBLIC_`-prefixed,
-so they are readable only from server-side code (route handlers / server components) — if browser-side
-Supabase is added later these need the `NEXT_PUBLIC_` prefix. The API loads `.env` via
-`--env-file-if-exists` in its dev/start scripts, so a missing file is fine but a present one is picked up.
+`SUPABASE_URL` is the same underlying project URL in both files. The API loads `.env` via
+`--env-file-if-exists` in its dev/start/worker scripts, so a missing file is fine but a present one is picked up.
 
 ## Scripts (root)
 
