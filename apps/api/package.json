@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
+    "@fastify/multipart": "^9.0.1",
     "@richfeed/shared": "workspace:*",
     "@supabase/supabase-js": "^2.47.10",
     "bullmq": "^6.3.1",
     "fastify": "^5.2.0",
-    "ioredis": "^5.4.2"
+    "ioredis": "^5.4.2",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@richfeed/config": "workspace:*",

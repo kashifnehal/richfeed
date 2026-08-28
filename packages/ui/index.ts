@@ -9,3 +9,9 @@ export type { SidebarProps, SidebarActive } from "./components/Sidebar";
 
 export { Topbar } from "./components/Topbar";
 export type { TopbarProps } from "./components/Topbar";
+
+export { EmptyState } from "./components/EmptyState";
+export type { EmptyStateProps } from "./components/EmptyState";
+
+export { Avatar } from "./components/Avatar";
+export type { AvatarProps } from "./components/Avatar";

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "@richfeed/ui/tokens.css";
 import "./globals.css";
+import { ToastProvider } from "../components/shared/Toast";
 
 export const metadata: Metadata = {
   title: "The Social Queue",
@@ -28,7 +29,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-app font-sans text-primary antialiased">{children}</body>
+      <body className="bg-app font-sans text-primary antialiased">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
