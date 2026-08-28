@@ -19,6 +19,7 @@ interface DashboardResponse {
     failedTargets: {
       id: string;
       scheduledPostId: string;
+      status: string;
       account: { displayName: string | null; platform: string } | null;
     }[];
     accountsNeedingReconnect: { id: string; displayName: string | null; platform: string }[];
@@ -35,10 +36,10 @@ export function NotificationBell(): ReactElement {
       const data = await apiFetch<DashboardResponse>("/api/dashboard");
       const failed: NotificationItem[] = data.attention.failedTargets.map((t) => ({
         id: `failed-${t.id}`,
-        label: "Post failed to publish",
+        label: t.status === "needs_reconnect" ? "Target needs account reconnect" : "Post failed to publish",
         sublabel: t.account?.displayName ?? t.account?.platform ?? "Unknown account",
         href: `/posts/${t.scheduledPostId}`,
-        kind: "failed",
+        kind: t.status === "needs_reconnect" ? "needs_reconnect" : "failed",
       }));
       const reconnect: NotificationItem[] = data.attention.accountsNeedingReconnect.map((a) => ({
         id: `reconnect-${a.id}`,

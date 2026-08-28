@@ -615,7 +615,7 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
       .from("post_targets")
       .select("id, scheduled_posts!inner(user_id)", { count: "exact", head: true })
       .eq("scheduled_posts.user_id", userId)
-      .eq("status", "failed"),
+      .in("status", ["failed", "needs_reconnect"]),
     supabase
       .from("social_accounts")
       .select("id", { count: "exact", head: true })
@@ -650,7 +650,7 @@ export async function getAttentionItems(userId: string): Promise<AttentionItems>
       .from("post_targets")
       .select(`*, scheduled_posts!inner(user_id, caption), social_accounts(*)`)
       .eq("scheduled_posts.user_id", userId)
-      .eq("status", "failed")
+      .in("status", ["failed", "needs_reconnect"])
       .order("updated_at", { ascending: false })
       .limit(20),
     supabase

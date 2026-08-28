@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import type { SocialAccountDto } from "@richfeed/shared";
+import { accountStatusLabel } from "../../lib/account-status";
 import { PLATFORM_LABELS, platformToBadge } from "../../lib/platform";
 
 export interface AccountMultiSelectProps {
@@ -49,14 +50,23 @@ export function AccountMultiSelect({
           <div className="flex flex-col gap-1.5">
             {group.map((account) => {
               const checked = selectedIds.includes(account.id);
+              // needs_reconnect accounts are shown, not hidden, so it's clear
+              // the account exists — but disabled, since a post targeting a
+              // broken connection would only ever fail. "limited" accounts
+              // can still publish, so they stay selectable.
+              const disabled = account.status === "needs_reconnect";
               return (
                 <label
                   key={account.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-control border border-subtle-2 bg-surface px-3 py-2.5 transition-colors hover:bg-sidebar-hover"
+                  title={disabled ? "Reconnect this account before scheduling posts to it." : undefined}
+                  className={`flex items-center gap-3 rounded-control border border-subtle-2 bg-surface px-3 py-2.5 transition-colors ${
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-sidebar-hover"
+                  }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
+                    disabled={disabled}
                     onChange={() => onToggle(account.id)}
                     className="h-4 w-4 accent-[color:var(--sq-accent)]"
                   />
@@ -66,8 +76,15 @@ export function AccountMultiSelect({
                     platform={platformToBadge(account.platform)}
                     size="sm"
                   />
-                  <span className="text-sm text-primary">
-                    {account.displayName ?? PLATFORM_LABELS[account.platform]}
+                  <span className="flex flex-1 flex-col">
+                    <span className="text-sm text-primary">
+                      {account.displayName ?? PLATFORM_LABELS[account.platform]}
+                    </span>
+                    {disabled ? (
+                      <span className="text-xs text-status-needs-reconnect-text">
+                        {accountStatusLabel(account.status)} — reconnect to schedule posts here
+                      </span>
+                    ) : null}
                   </span>
                 </label>
               );

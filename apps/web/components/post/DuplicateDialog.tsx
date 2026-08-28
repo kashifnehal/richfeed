@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState, type ReactElement, type ReactNode } from "react";
 import type { SocialAccountDto } from "@richfeed/shared";
 import { ScheduleTimePicker } from "./ScheduleTimePicker";
+import { accountStatusLabel } from "../../lib/account-status";
 import { PLATFORM_LABELS, platformToBadge } from "../../lib/platform";
 
 export interface DuplicateDialogProps {
@@ -91,29 +92,43 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
           ) : (
             <>
               <div className="mt-4 flex flex-col gap-1.5">
-                {accounts.map((account) => (
-                  <label
-                    key={account.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-control border border-subtle-2 px-3 py-2.5 transition-colors hover:bg-sidebar-hover"
-                  >
-                    <input
-                      type="radio"
-                      name="duplicate-target"
-                      checked={accountId === account.id}
-                      onChange={() => setAccountId(account.id)}
-                      className="h-4 w-4 accent-[color:var(--sq-accent)]"
-                    />
-                    <Avatar
-                      name={account.displayName ?? account.platform}
-                      imageUrl={account.avatarUrl}
-                      platform={platformToBadge(account.platform)}
-                      size="sm"
-                    />
-                    <span className="text-sm text-primary">
-                      {account.displayName ?? PLATFORM_LABELS[account.platform]}
-                    </span>
-                  </label>
-                ))}
+                {accounts.map((account) => {
+                  const disabled = account.status === "needs_reconnect";
+                  return (
+                    <label
+                      key={account.id}
+                      title={disabled ? "Reconnect this account before duplicating a post to it." : undefined}
+                      className={`flex items-center gap-3 rounded-control border border-subtle-2 px-3 py-2.5 transition-colors ${
+                        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-sidebar-hover"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="duplicate-target"
+                        checked={accountId === account.id}
+                        disabled={disabled}
+                        onChange={() => setAccountId(account.id)}
+                        className="h-4 w-4 accent-[color:var(--sq-accent)]"
+                      />
+                      <Avatar
+                        name={account.displayName ?? account.platform}
+                        imageUrl={account.avatarUrl}
+                        platform={platformToBadge(account.platform)}
+                        size="sm"
+                      />
+                      <span className="flex flex-1 flex-col">
+                        <span className="text-sm text-primary">
+                          {account.displayName ?? PLATFORM_LABELS[account.platform]}
+                        </span>
+                        {disabled ? (
+                          <span className="text-xs text-status-needs-reconnect-text">
+                            {accountStatusLabel(account.status)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
 
               <div className="mt-4">

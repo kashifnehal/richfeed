@@ -1,9 +1,9 @@
 "use client";
 
 import { EmptyState, PlatformBadge, StatusPill } from "@richfeed/ui";
-import { ListChecks } from "lucide-react";
+import { ArrowDown, ArrowUp, ListChecks } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Platform, PostTargetStatus, ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
 import { FilterBar } from "../../../components/post/FilterBar";
 import { useToast } from "../../../components/shared/Toast";
@@ -32,6 +32,13 @@ function QueueContent() {
   });
   const [posts, setPosts] = useState<ScheduledPostDto[] | null>(null);
   const [accounts, setAccounts] = useState<SocialAccountDto[]>([]);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  // Client-side "load more" pagination — the API has no offset/limit yet,
+  // but the queue can realistically hold far more rows than fit one screen,
+  // so this at least keeps the initial render/scroll manageable. Page size
+  // of 20 is a product-decision placeholder, not a backend constraint.
+  const PAGE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const load = useCallback(() => {
     const query = statuses.length > 0 ? `?status=${statuses.join(",")}` : "";
@@ -75,7 +82,20 @@ function QueueContent() {
     }
   }
 
-  const rows = flattenToQueueRows(posts ?? [], platforms);
+  const allRows = flattenToQueueRows(posts ?? [], platforms);
+  const sortedRows = useMemo(() => {
+    const next = [...allRows];
+    if (sortDir === "desc") next.reverse(); // flattenToQueueRows is already soonest-first (asc)
+    return next;
+  }, [allRows, sortDir]);
+  const rows = sortedRows.slice(0, visibleCount);
+  const hasMore = sortedRows.length > rows.length;
+
+  // Reset pagination whenever the underlying row set changes shape, so
+  // switching filters doesn't leave you stranded on page 3 of a now-shorter list.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [statuses, platforms, sortDir]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -88,7 +108,7 @@ function QueueContent() {
 
       {posts === null ? (
         <p className="text-sm text-secondary">Loading...</p>
-      ) : rows.length === 0 ? (
+      ) : allRows.length === 0 ? (
         <EmptyState
           icon={<ListChecks size={22} />}
           title="Nothing in the queue"
@@ -103,7 +123,16 @@ function QueueContent() {
                 <tr className="border-b border-subtle-2 text-xs uppercase tracking-wide text-secondary">
                   <th className="px-4 py-3 font-semibold">Post</th>
                   <th className="px-4 py-3 font-semibold">Account</th>
-                  <th className="px-4 py-3 font-semibold">Scheduled</th>
+                  <th className="px-4 py-3 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                      className="flex items-center gap-1 font-semibold text-secondary transition-colors hover:text-primary"
+                    >
+                      Scheduled
+                      {sortDir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
@@ -193,6 +222,16 @@ function QueueContent() {
               );
             })}
           </div>
+
+          {hasMore ? (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              className="self-center rounded-control border border-subtle bg-surface px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-sidebar-hover"
+            >
+              Load more ({sortedRows.length - rows.length} remaining)
+            </button>
+          ) : null}
         </>
       )}
     </div>

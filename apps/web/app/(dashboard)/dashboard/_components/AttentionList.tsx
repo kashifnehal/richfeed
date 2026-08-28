@@ -19,10 +19,15 @@ export function AttentionList({
     ...failedTargets.map((t) => ({
       id: `failed-${t.id}`,
       href: `/posts/${t.scheduledPostId}`,
-      title: "Post failed to publish",
+      title: t.status === "needs_reconnect" ? "Target needs account reconnect" : "Post failed to publish",
       subtitle: t.account?.displayName ?? t.account?.platform ?? "Unknown account",
       platform: t.account?.platform,
-      icon: <AlertTriangle size={16} className="text-status-failed-text" />,
+      icon:
+        t.status === "needs_reconnect" ? (
+          <Link2Off size={16} className="text-status-needs-reconnect-text" />
+        ) : (
+          <AlertTriangle size={16} className="text-status-failed-text" />
+        ),
     })),
     ...accountsNeedingReconnect.map((a) => ({
       id: `reconnect-${a.id}`,
