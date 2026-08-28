@@ -323,6 +323,96 @@ export interface ListPostsFilters {
   to?: string;
 }
 
+export interface PostTargetsPageFilters extends ListPostsFilters {
+  /** Max post_targets (rows) to return. */
+  limit: number;
+  /** Row offset into the ordered post_targets set. Default 0. */
+  offset?: number;
+  /** Sort direction on publish_at. Default "asc" (soonest first). */
+  sort?: "asc" | "desc";
+}
+
+export interface PostTargetsPage {
+  /** Posts that own the targets in this page — each carries only this page's targets. */
+  posts: ScheduledPostDto[];
+  /** Total matching post_targets across all pages (for "N remaining"). */
+  total: number;
+  /** Whether another page exists after this one. */
+  hasMore: boolean;
+}
+
+interface PostTargetWithPostRawRow extends PostTargetRawRow {
+  scheduled_posts: ScheduledPostRawRow | null;
+}
+
+/**
+ * Server-side paginated variant of listScheduledPostsWithTargets, rooted at
+ * post_targets so a "page" is exactly `limit` queue rows (the Queue renders
+ * one row per target). Targets are regrouped into their parent posts for the
+ * shared ScheduledPostDto response shape; a post whose targets straddle a
+ * page boundary appears in both pages with its respective subset of targets,
+ * which flattenToQueueRows on the client handles transparently.
+ */
+export async function listScheduledPostTargetsPage(
+  userId: string,
+  filters: PostTargetsPageFilters,
+): Promise<PostTargetsPage> {
+  const offset = Math.max(0, filters.offset ?? 0);
+  const limit = Math.max(1, filters.limit);
+  const ascending = filters.sort !== "desc";
+
+  let query = getSupabaseClient()
+    .from("post_targets")
+    .select(`${TARGET_EMBED}, scheduled_posts!inner(*)`, { count: "exact" })
+    .eq("scheduled_posts.user_id", userId)
+    .order("publish_at", { ascending })
+    // Stable tiebreak so rows never shuffle between pages when publish_at ties.
+    .order("id", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (filters.statuses?.length) {
+    query = query.in("status", filters.statuses);
+  }
+  if (filters.from) {
+    query = query.gte("publish_at", filters.from);
+  }
+  if (filters.to) {
+    query = query.lte("publish_at", filters.to);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    // PostgREST returns "range not satisfiable" (PGRST103) when `offset` is
+    // past the end of the result set — treat that as an empty trailing page
+    // rather than an error, since the Queue can legitimately request it.
+    if (error.code === "PGRST103") {
+      return { posts: [], total: count ?? offset, hasMore: false };
+    }
+    throw new DbError(`Failed to page posts for user ${userId}: ${error.message}`, error);
+  }
+
+  const rows = (data as PostTargetWithPostRawRow[]) ?? [];
+  const byPostId = new Map<string, ScheduledPostDto>();
+  const order: string[] = [];
+  for (const row of rows) {
+    const postRow = row.scheduled_posts;
+    if (!postRow) continue;
+    if (!byPostId.has(postRow.id)) {
+      byPostId.set(postRow.id, { ...mapPost({ ...postRow, post_targets: [] }), targets: [] });
+      order.push(postRow.id);
+    }
+    byPostId.get(postRow.id)!.targets.push(mapTarget(row));
+  }
+
+  const total = count ?? 0;
+  return {
+    posts: order.map((id) => byPostId.get(id)!),
+    total,
+    hasMore: offset + rows.length < total,
+  };
+}
+
 export async function listScheduledPostsWithTargets(
   userId: string,
   filters: ListPostsFilters = {},

@@ -47,10 +47,18 @@ export function ProfilePanel({ user }: { user: User }): ReactElement {
     <div className="flex flex-col gap-8">
       <form onSubmit={(e) => void handleSaveProfile(e)} className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-primary">Profile</h2>
-        <Input label="Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <Input
+          label="Name"
+          name="full_name"
+          autoComplete="name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
         <Input
           label="Email"
+          name="email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -67,7 +75,9 @@ export function ProfilePanel({ user }: { user: User }): ReactElement {
         <h2 className="text-sm font-semibold text-primary">Change password</h2>
         <Input
           label="New password"
+          name="new_password"
           type="password"
+          autoComplete="new-password"
           minLength={8}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}

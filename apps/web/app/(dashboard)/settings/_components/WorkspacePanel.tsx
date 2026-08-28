@@ -32,7 +32,12 @@ export function WorkspacePanel({ user }: { user: User }): ReactElement {
   return (
     <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-4">
       <h2 className="text-sm font-semibold text-primary">Workspace</h2>
-      <Input label="Workspace name" value={name} onChange={(e) => setName(e.target.value)} />
+      <Input
+        label="Workspace name"
+        name="workspace_name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
       <button
         type="submit"
         disabled={saving}

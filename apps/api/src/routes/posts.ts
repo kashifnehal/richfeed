@@ -14,6 +14,7 @@ import {
   duplicatePostToAccount,
   getScheduledPostDetail,
   listScheduledPostsWithTargets,
+  listScheduledPostTargetsPage,
   rescheduleTarget,
   updateScheduledPostFields,
 } from "../db/queries";
@@ -26,27 +27,62 @@ function parseStatusQuery(raw: unknown): PostTargetStatus[] | undefined {
   return valid.length > 0 ? valid.map((p) => p.data) : undefined;
 }
 
+/** Parses a non-negative integer query param, or undefined if absent/invalid. */
+function parseNonNegInt(raw: unknown): number | undefined {
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 export async function postsRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/posts — list scheduled_posts with their post_targets. Supports
   // ?status=failed,queued and ?from=ISO&to=ISO date-range filters (applied
   // to post_targets.publish_at) for Calendar/Queue.
-  app.get<{ Querystring: { status?: string; from?: string; to?: string } }>(
-    "/api/posts",
-    async (request, reply) => {
-      try {
-        const user = await requireUser(request);
-        const statuses = parseStatusQuery(request.query.status);
-        const posts = await listScheduledPostsWithTargets(user.id, {
+  //
+  // When ?limit is present, the response is paged server-side at the
+  // post_targets (queue-row) level: ?limit=20&offset=20&sort=asc|desc, and
+  // the payload gains a `pagination: { limit, offset, total, hasMore }`
+  // block. Without ?limit the full matching set is returned (Calendar).
+  app.get<{
+    Querystring: {
+      status?: string;
+      from?: string;
+      to?: string;
+      limit?: string;
+      offset?: string;
+      sort?: string;
+    };
+  }>("/api/posts", async (request, reply) => {
+    try {
+      const user = await requireUser(request);
+      const statuses = parseStatusQuery(request.query.status);
+      const from = request.query.from;
+      const to = request.query.to;
+
+      const limit = parseNonNegInt(request.query.limit);
+      if (limit !== undefined && limit > 0) {
+        const offset = parseNonNegInt(request.query.offset) ?? 0;
+        const sort = request.query.sort === "desc" ? "desc" : "asc";
+        const page = await listScheduledPostTargetsPage(user.id, {
           statuses,
-          from: request.query.from,
-          to: request.query.to,
+          from,
+          to,
+          limit,
+          offset,
+          sort,
         });
-        return { posts };
-      } catch (err) {
-        sendUnauthorized(reply, err);
+        return {
+          posts: page.posts,
+          pagination: { limit, offset, total: page.total, hasMore: page.hasMore },
+        };
       }
-    },
-  );
+
+      const posts = await listScheduledPostsWithTargets(user.id, { statuses, from, to });
+      return { posts };
+    } catch (err) {
+      sendUnauthorized(reply, err);
+    }
+  });
 
   // GET /api/posts/:id — full detail including publish_attempts per target.
   app.get<{ Params: { id: string } }>("/api/posts/:id", async (request, reply) => {

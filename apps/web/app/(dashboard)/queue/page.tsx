@@ -13,6 +13,11 @@ import { flattenToQueueRows } from "../../../lib/queue-rows";
 import { targetStatusLabel, targetStatusToPill } from "../../../lib/status";
 import { QueueRowActions } from "./_components/QueueRowActions";
 
+interface PostsPage {
+  posts: ScheduledPostDto[];
+  pagination: { limit: number; offset: number; total: number; hasMore: boolean };
+}
+
 export default function QueuePage() {
   return (
     <Suspense fallback={<p className="text-sm text-secondary">Loading...</p>}>
@@ -33,26 +38,95 @@ function QueueContent() {
   const [posts, setPosts] = useState<ScheduledPostDto[] | null>(null);
   const [accounts, setAccounts] = useState<SocialAccountDto[]>([]);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  // Client-side "load more" pagination — the API has no offset/limit yet,
-  // but the queue can realistically hold far more rows than fit one screen,
-  // so this at least keeps the initial render/scroll manageable. Page size
-  // of 20 is a product-decision placeholder, not a backend constraint.
+  // Server-side "load more" pagination: GET /api/posts?limit&offset&sort pages
+  // the queue at the post_targets (row) level. `total`/`serverHasMore` come
+  // straight from the API's `pagination` block; `nextOffset` is the row offset
+  // for the next page. Page size of 20 is a product-decision placeholder.
   const PAGE_SIZE = 20;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [total, setTotal] = useState(0);
+  const [serverHasMore, setServerHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = useCallback(() => {
-    const query = statuses.length > 0 ? `?status=${statuses.join(",")}` : "";
-    apiFetch<{ posts: ScheduledPostDto[] }>(`/api/posts${query}`)
-      .then((res) => setPosts(res.posts))
-      .catch(() => setPosts([]));
+  const fetchPage = useCallback(
+    (offset: number) => {
+      const params = new URLSearchParams();
+      if (statuses.length > 0) params.set("status", statuses.join(","));
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
+      params.set("sort", sortDir);
+      return apiFetch<PostsPage>(`/api/posts?${params.toString()}`);
+    },
+    [statuses, sortDir],
+  );
+
+  /** Merge a fresh page of posts into the accumulated set, deduping targets by id. */
+  function mergePosts(prev: ScheduledPostDto[], incoming: ScheduledPostDto[]): ScheduledPostDto[] {
+    const map = new Map(prev.map((p) => [p.id, { ...p, targets: [...p.targets] }]));
+    for (const post of incoming) {
+      const existing = map.get(post.id);
+      if (!existing) {
+        map.set(post.id, { ...post, targets: [...post.targets] });
+        continue;
+      }
+      const seen = new Set(existing.targets.map((t) => t.id));
+      existing.targets.push(...post.targets.filter((t) => !seen.has(t.id)));
+    }
+    return [...map.values()];
+  }
+
+  // (Re)load page 1 whenever the status filter or sort direction changes.
+  useEffect(() => {
+    let cancelled = false;
+    setPosts(null);
+    setNextOffset(PAGE_SIZE);
+    fetchPage(0)
+      .then((res) => {
+        if (cancelled) return;
+        setPosts(res.posts);
+        setTotal(res.pagination.total);
+        setServerHasMore(res.pagination.hasMore);
+      })
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchPage]);
+
+  useEffect(() => {
     apiFetch<{ accounts: SocialAccountDto[] }>("/api/accounts")
       .then((res) => setAccounts(res.accounts))
       .catch(() => setAccounts([]));
-  }, [statuses]);
+  }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(() => {
+    setPosts(null);
+    setNextOffset(PAGE_SIZE);
+    fetchPage(0)
+      .then((res) => {
+        setPosts(res.posts);
+        setTotal(res.pagination.total);
+        setServerHasMore(res.pagination.hasMore);
+      })
+      .catch(() => setPosts([]));
+  }, [fetchPage]);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const res = await fetchPage(nextOffset);
+      setPosts((prev) => mergePosts(prev ?? [], res.posts));
+      setTotal(res.pagination.total);
+      setServerHasMore(res.pagination.hasMore);
+      setNextOffset((o) => o + PAGE_SIZE);
+    } catch {
+      showToast("Couldn't load more of the queue. Try again.", "error");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function handleCancel(targetId: string) {
     const row = rows.find((r) => r.targetId === targetId);
@@ -83,19 +157,14 @@ function QueueContent() {
   }
 
   const allRows = flattenToQueueRows(posts ?? [], platforms);
-  const sortedRows = useMemo(() => {
+  const rows = useMemo(() => {
     const next = [...allRows];
     if (sortDir === "desc") next.reverse(); // flattenToQueueRows is already soonest-first (asc)
     return next;
   }, [allRows, sortDir]);
-  const rows = sortedRows.slice(0, visibleCount);
-  const hasMore = sortedRows.length > rows.length;
-
-  // Reset pagination whenever the underlying row set changes shape, so
-  // switching filters doesn't leave you stranded on page 3 of a now-shorter list.
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [statuses, platforms, sortDir]);
+  const hasMore = serverHasMore;
+  // Client-side platform filter can hide some loaded rows, so clamp at 0.
+  const remaining = Math.max(0, total - allRows.length);
 
   return (
     <div className="flex flex-col gap-5">
@@ -226,10 +295,11 @@ function QueueContent() {
           {hasMore ? (
             <button
               type="button"
-              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-              className="self-center rounded-control border border-subtle bg-surface px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-sidebar-hover"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="self-center rounded-control border border-subtle bg-surface px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-sidebar-hover disabled:opacity-60"
             >
-              Load more ({sortedRows.length - rows.length} remaining)
+              {loadingMore ? "Loading..." : `Load more (${remaining} remaining)`}
             </button>
           ) : null}
         </>

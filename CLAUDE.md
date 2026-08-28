@@ -50,6 +50,17 @@ yet. Optimize for forward progress over process:
   root `turbo.json` as a third persistent `pnpm dev` task alongside web/api. Don't merge it into
   `server.ts`.
 
+## E2E smoke suite — run this at the end of every build step
+
+`pnpm test:e2e` (root) → Playwright, `apps/web/e2e/`, drives a real Chromium against the live local
+stack and real Supabase Auth. It signs in as the seeded demo user and asserts against the real seeded
+data (dashboard stats, attention list, 9 accounts, compose disabled-account rule, publish-attempt log,
+calendar month/week, queue server-side pagination + sort, settings tabs, responsive overflow at
+sm/md/lg). Credentials live in git-ignored `apps/web/.env.test` (`E2E_USER_EMAIL` / `E2E_USER_PASSWORD`);
+rotate with `pnpm --filter api create-demo-user -- --user <id> --password '<new>'` (now idempotent —
+resets an existing user instead of making a new one). Re-run `pnpm --filter api seed -- --user <id>` if
+the seeded data has drifted. The webServer block auto-starts `pnpm dev` if nothing is on :3000.
+
 ## Design system — hard rule
 
 Every color/radius value in `apps/web` must come from `packages/ui/tokens.css` via the Tailwind

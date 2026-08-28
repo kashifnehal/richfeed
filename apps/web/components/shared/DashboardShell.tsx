@@ -32,7 +32,9 @@ export function DashboardShell({ children, email, workspaceName }: DashboardShel
         workspaceName={workspaceName}
       />
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      {/* min-w-0 lets wide children (e.g. the Queue table's overflow-x-auto
+          wrapper) scroll internally instead of stretching the whole page. */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar
           title={title}
           onOpenMobileNav={() => setMobileNavOpen(true)}
