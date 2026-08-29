@@ -136,7 +136,7 @@ soft-delete / `disconnected` status is the real answer (needs a migration).
 Test-only: dev-mode sign-in can be clicked pre-hydration; `formSignIn()` waits +
 retries.
 
-## 2026-08-29 — Add docs/brain living documentation (commit TBD)
+## 2026-08-29 — Add docs/brain living documentation (commit fa76165)
 
 What shipped: `docs/brain/` — this folder. `README.md` (purpose + maintenance
 convention), `ARCHITECTURE.md` (real stack + repo tree + system flow),
@@ -151,7 +151,7 @@ already exist; it does not. No platform adapter of any kind exists yet, the
 worker publish step is still a stub, and there are no platform OAuth env vars.
 Drift noted in `DECISIONS.md`.
 
-## 2026-08-29 — Workspaces table, notification prefs, server-side platform filter, real MIME detection (commit TBD)
+## 2026-08-29 — Workspaces table, notification prefs, server-side platform filter, real MIME detection (commit dc59e91)
 
 What shipped: four gap-closers on the existing engine/UI, no platform/OAuth work.
 (1) **Real `workspaces` table** (migration `0002`): id / name / owner_user_id /
