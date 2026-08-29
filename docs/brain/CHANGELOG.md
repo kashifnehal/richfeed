@@ -200,6 +200,41 @@ the real content-type. (d) Calendar keeps its client-side platform filter even
 though the API now supports `?platform` there too — it's unpaginated so the
 count was never approximate.
 
+## 2026-08-29 — CLAUDE.md: scope verification to the change (commit 7043287)
+
+What shipped: a `CLAUDE.md` overhaul to cut session context cost. Standing
+instructions that fired unconditionally (run E2E at the end of every step, full
+build/lint/dev-boot verification) are now scoped to blast radius — a
+narrow/additive change gets the affected package's `tsc` plus one `curl`, not
+the full sequence, and never twice; the full sequence is reserved for RLS/auth,
+the queue/worker pipeline, the design tokens, or a migration. The E2E section
+now says: run once, only when `apps/web`/`apps/api` runtime behaviour changed,
+and explicitly skip (and say so) for docs / scripts / config. Adds an
+`lsof -ti:3000` check as its own step before any `pnpm build`, and a new
+"Keeping sessions cheap" section (read narrow, prefer `curl` over browser
+automation, one task per session, disable the unused claude.ai MCP connectors).
+
+Deviations/known gaps: none — `CLAUDE.md` only, no code or docs/brain content
+touched.
+
+## 2026-08-29 — Real PRODUCT.md / BUSINESS.md; platform tiers corrected (commit dc72af1)
+
+What shipped: the hand-authored `PRODUCT.md` and `BUSINESS.md` replaced the
+placeholder stubs the folder shipped with in `fa76165`. `platforms/STATUS.md`'s
+tier column was rewritten against the now-available feasibility research (it had
+been flagged as a best-guess placeholder): Tier 1 LinkedIn-personal / X /
+YouTube / Meta own-account / Threads dev-mode; Tier 2 Meta multi-tenant / TikTok /
+Pinterest / Threads production; Tier 3 LinkedIn Company Pages; Reddit deferred;
+Snapchat out of scope. Per-platform blockers and realistic timelines were pulled
+from `BUSINESS.md`'s Track A table. `DECISIONS.md` and `README.md` updated to
+match. Re-running the original scaffold prompt confirmed the rest of the folder
+is already current through `dc59e91`. No app code touched — nothing under
+`apps/` or `packages/`.
+
+Deviations/known gaps: still no platform adapter of any kind —
+`apps/api/src/platforms/` does not exist, every platform is "not started", the
+worker publish step is a stub, and there are no platform OAuth env vars.
+
 ---
 
 ## Template for future entries

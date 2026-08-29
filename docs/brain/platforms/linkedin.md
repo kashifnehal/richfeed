@@ -26,5 +26,9 @@ should be filled in with:
 
 ## Prep doc
 
-No LinkedIn preparation document currently lives in this repo. If one is
-authored later (in `docs/` or the planning thread), link it here.
+There's no dedicated LinkedIn integration doc in the repo yet. The relevant
+context that does exist: `docs/brain/PRODUCT.md` (rollout priority — LinkedIn
+personal is Tier 1, Company Pages Tier 3), `docs/brain/BUSINESS.md` (approval
+blockers — personal-profile posting needs no approval; the Company Page Partner
+Program is deliberately deferred), and `docs/brain/platforms/STATUS.md`. Link a
+real integration doc here once `linkedin.ts` is written.

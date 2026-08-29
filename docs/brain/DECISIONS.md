@@ -195,6 +195,22 @@ every future build step updates the relevant `docs/brain` files as part of its
 own commit — `CHANGELOG.md` always, plus `ARCHITECTURE.md` / `platforms/*` /
 `features/STATUS.md` / `DECISIONS.md` as applicable. Treated as part of "done".
 
+## 2026-08-29 — Real PRODUCT.md / BUSINESS.md landed; platform tiers corrected against the research
+
+The hand-authored `PRODUCT.md` and `BUSINESS.md` (written in the planning
+thread) replaced the placeholder stubs the folder shipped with. With the
+competitor and approval-blocker research now in the repo, `platforms/STATUS.md`'s
+tier column — previously flagged as a best-guess placeholder — was rewritten to
+match: **Tier 1** LinkedIn-personal / X / YouTube / Meta own-account / Threads
+dev-mode; **Tier 2** Meta multi-tenant / TikTok Direct Post / Pinterest Standard
+Access / Threads production; **Tier 3** LinkedIn Company Pages; Reddit deferred
+(the constraint is community anti-spam norms, not engineering); Snapchat out of
+scope (no posting API). The positioning wedge is recorded as reliability +
+billing transparency, not feature count. Re-running the docs/brain scaffold
+prompt otherwise found the folder already present and current through commit
+`dc59e91` — no structural rebuild was needed, only the PRODUCT/BUSINESS swap and
+this tier correction.
+
 ## Observed drift from the scaffold prompt's assumptions (noted 2026-08-29)
 
 The prompt that created this folder assumed `apps/api/src/platforms/` and a

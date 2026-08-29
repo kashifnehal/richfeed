@@ -25,10 +25,12 @@ it belongs here.
 | `platforms/<name>.md` | Per-platform integration detail — only substantive once a real adapter exists. |
 | `features/STATUS.md` | Every page in the product and how real it currently is. |
 
-`PRODUCT.md` and `BUSINESS.md` were authored in the planning thread and are
-dropped in by hand. If they're missing when a build step runs, that step leaves
-a short placeholder stub so nothing is ever absent — the stub is meant to be
-overwritten with the real file, not edited in place.
+`PRODUCT.md` and `BUSINESS.md` are hand-authored in the planning thread. The
+real versions were dropped into this folder on 2026-08-29, replacing the
+placeholder stubs the folder shipped with. They're maintained by hand, not by
+build steps — but a build step **should** refresh `PRODUCT.md`'s "Current build
+status" section and `BUSINESS.md`'s blocker-status table when its work moves
+either.
 
 ## Maintenance convention — this is part of "done", not a one-time exercise
 

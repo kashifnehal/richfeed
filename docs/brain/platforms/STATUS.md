@@ -3,7 +3,8 @@
 Wiring status for every target platform. **Update this whenever a platform's
 status or blocker changes**, as part of that build step's commit.
 
-_Last updated: 2026-08-29 (docs/brain scaffold)._
+_Last updated: 2026-08-29 (tier column + blockers corrected against the real
+`PRODUCT.md` / `BUSINESS.md` feasibility research, now in the repo)._
 
 ## Status legend
 
@@ -24,20 +25,24 @@ real integration exists.
 
 | Platform | Tier | Status | Blocker | Last updated |
 | --- | --- | --- | --- | --- |
-| linkedin_personal | 1 | not started | none — this is the first one to build (zero review gate) | 2026-08-29 |
-| twitter (X) | 1 | not started | API access tier / cost decision | 2026-08-29 |
-| linkedin_org (Company Pages) | 2 | not started | deliberately deferred — see below | 2026-08-29 |
-| instagram | 1 | not started | Meta app review + Business Verification | 2026-08-29 |
-| facebook | 1 | not started | Meta app review + Business Verification | 2026-08-29 |
-| threads | 2 | not started | Threads API access (tied to Meta) | 2026-08-29 |
-| youtube | 2 | not started | Google OAuth verification / quota | 2026-08-29 |
-| tiktok | 2 | not started | TikTok content-posting API approval | 2026-08-29 |
-| pinterest | 3 | not started | Pinterest app review | 2026-08-29 |
-| reddit | 3 | not started | Reddit API terms / rate limits | 2026-08-29 |
+| linkedin_personal | 1 | not started | none — free & instant, no review gate; the first integration to build | 2026-08-29 |
+| twitter (X) | 1 | not started | X developer account funding — pay-per-use since Feb 2026, ~15 min, no review ($0.015/plain post, $0.20/post-with-URL) | 2026-08-29 |
+| youtube | 1 | not started | Google OAuth verification / quota; the basic flow is free and fast | 2026-08-29 |
+| instagram | 1 (own-account) / 2 (multi-tenant) | not started | Meta Business Verification + Advanced Access App Review — verification 1-2+ wks, review 4-8+ wks | 2026-08-29 |
+| facebook | 1 (own-account) / 2 (multi-tenant) | not started | same Meta Business Verification + Advanced Access review as instagram | 2026-08-29 |
+| threads | 1 (dev-mode) / 2 (production) | not started | Meta Threads App Review for production posting — up to ~20 days per Meta's 2026 guidance | 2026-08-29 |
+| tiktok | 2 | not started | TikTok Content Posting API audit — 2-4+ wks incl. resubmission | 2026-08-29 |
+| pinterest | 2 | not started | Pinterest Standard Access — 3-4+ wks, no official SLA | 2026-08-29 |
+| linkedin_org (Company Pages) | 3 | not started | LinkedIn Company Page Partner Program — deliberately deferred until Tier-1 is live with real usage to demo | 2026-08-29 |
+| reddit | deferred (low priority) | not started | none technical — API access is trivial; the real constraint is community anti-spam norms | 2026-08-29 |
 
-> **Tier column is a placeholder.** The tiers above are a best-guess grouping,
-> not transcribed from the original feasibility research (that doc is not in
-> this repo). Correct this table against that research when it's to hand.
+**Snapchat is out of scope** — no organic posting API exists.
+
+> **Tier/blocker source.** As of 2026-08-29 this table is transcribed from
+> `docs/brain/PRODUCT.md` ("Platform rollout priority") and `docs/brain/BUSINESS.md`
+> ("Platform approval blockers"), which now live in the repo. Meta and Threads
+> carry a split tier: own-account / dev-mode posting is Tier 1, posting on behalf
+> of other users is Tier 2 and gated by the review in the Blocker column.
 
 ## Ordering decision
 
