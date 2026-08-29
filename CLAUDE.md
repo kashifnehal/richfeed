@@ -16,6 +16,12 @@ yet. Optimize for forward progress over process:
   against Postgres, one curl), don't re-run the full build/lint/test/dev-boot sequence again. Full
   independent re-verification is only worth it for changes to the RLS/auth boundary or money-handling
   logic, and even then a targeted check beats redoing everything.
+- **Scale verification to the change, and run each check once.** A narrow, additive change — one
+  route, one query, one component, a `scripts/` file, docs — needs a targeted check: the affected
+  package's `tsc` (`pnpm --filter <pkg> build`) plus one `curl` against the running API. Not the whole
+  `pnpm build` + `pnpm lint` + `pnpm test:e2e` sequence, and never that sequence twice. Reserve the
+  full sequence for changes to the RLS/auth boundary, the queue/worker pipeline, the design-system
+  tokens, or a migration. Batch fixes before re-linting — don't lint-fix-lint one finding at a time.
 - **Don't gold-plate scaffolding-stage work.** Skip exhaustive edge-case handling, extra abstraction
   layers, or defensive code for scenarios that can't occur yet (e.g. no need to handle multi-workspace
   conflicts before workspaces exist). Flag a deliberately-cut corner in the report rather than silently
@@ -50,7 +56,13 @@ yet. Optimize for forward progress over process:
   root `turbo.json` as a third persistent `pnpm dev` task alongside web/api. Don't merge it into
   `server.ts`.
 
-## E2E smoke suite — run this at the end of every build step
+## E2E smoke suite — `pnpm test:e2e`
+
+Run it **once**, at the end of a step that changed runtime behaviour in `apps/web` or `apps/api`
+(routes, queries, components, middleware, schema). **Skip it — and say so in the report — for a step
+that can't affect it**: docs (`docs/brain/`, any `*.md`), `apps/api/src/scripts/*`, config, comments,
+`CLAUDE.md`. A single green pass is the bar; don't run it twice "to be sure." It's a real Chromium run
+plus a full DB reseed — it is not a cheap check.
 
 `pnpm test:e2e` (root) → Playwright, `apps/web/e2e/`, drives a real Chromium against the live local
 stack and real Supabase Auth. Covers read paths (dashboard stats, attention list, 9 accounts, compose
@@ -70,9 +82,11 @@ with mutations verified server-side via the same REST API the app uses.
   rest of the suite reuses it so GoTrue's `/token` endpoint isn't hammered. The auth specs opt out.
 - The webServer block auto-starts `pnpm dev` if nothing is on :3000.
 
+**Before any `pnpm build`, check for a running dev server as its own first step** (`lsof -ti:3000`).
 **Never run `pnpm build` while `pnpm dev` (or the E2E suite) is running** — `next build` and `next dev`
 share `apps/web/.next`, and a concurrent build corrupts the dev server's client bundle (sign-in stops
-hydrating; forms fall back to a native GET submit). Fix: kill dev, `rm -rf apps/web/.next`, restart.
+hydrating; forms fall back to a native GET submit). Recovery (kill dev, `rm -rf apps/web/.next`,
+restart, re-verify) costs far more than the check.
 
 ## Design system — hard rule
 
@@ -86,3 +100,25 @@ existing `sq-*` tokens instead of introducing a second color system. A grep for 
 
 Never ask the user to paste a raw secret/password into chat — have them add it directly to the
 relevant `.env`/`.env.local` file, then verify/mask it from there.
+
+## Keeping sessions cheap
+
+Sessions here routinely run past 150k context, which is expensive even when cached. Cut the overhead:
+
+- **Read narrow.** Open the specific routes / functions / components the task names. Don't `cat` a
+  dozen files "to get oriented" — the stack, repo tree, data model, route list and per-feature status
+  are in `docs/brain/ARCHITECTURE.md` and `docs/brain/features/STATUS.md`. Read those instead of
+  re-deriving them from the tree.
+- **Prefer cheap live checks.** `curl` the running API (port 4000) and read the code over driving a
+  browser. If a browser is genuinely needed, `pnpm test:e2e` (bounded output) beats any
+  browser-automation MCP, whose page snapshots are large and stay in context for the rest of the
+  session.
+- **One task per session.** When the user switches to an unrelated task, suggest `/clear` first; when
+  a task runs long, suggest `/compact`. Don't carry a finished step's exploration into the next one.
+- **The claude.ai MCP connectors (Resend, Railway, Vercel, Figma, Render, and the Supabase one) are
+  not used in this repo** — Supabase is reached via the env-var clients above. They only add a large
+  deferred-tool manifest to every session. Worth disabling for this workspace via `/mcp` (or in
+  claude.ai connector settings).
+- Don't restate a step's full report inside the commit message and again in chat and again in
+  `docs/brain/CHANGELOG.md` — write it once in `CHANGELOG.md`, keep the commit body and the chat
+  summary short and pointed.
