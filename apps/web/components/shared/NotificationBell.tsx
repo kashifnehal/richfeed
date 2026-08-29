@@ -4,6 +4,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { AlertTriangle, Bell, Link2Off } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
+import type { NotificationPreferencesDto } from "@richfeed/shared";
 import { apiFetch } from "../../lib/api";
 
 interface NotificationItem {
@@ -33,7 +34,15 @@ export function NotificationBell(): ReactElement {
 
   async function load() {
     try {
-      const data = await apiFetch<DashboardResponse>("/api/dashboard");
+      const [data, prefsRes] = await Promise.all([
+        apiFetch<DashboardResponse>("/api/dashboard"),
+        apiFetch<{ preferences: NotificationPreferencesDto }>(
+          "/api/notification-preferences",
+        ).catch(() => ({
+          preferences: { notifyOnFailedPost: true, notifyOnNeedsReconnect: true },
+        })),
+      ]);
+      const prefs = prefsRes.preferences;
       const failed: NotificationItem[] = data.attention.failedTargets.map((t) => ({
         id: `failed-${t.id}`,
         label: t.status === "needs_reconnect" ? "Target needs account reconnect" : "Post failed to publish",
@@ -48,7 +57,10 @@ export function NotificationBell(): ReactElement {
         href: "/accounts",
         kind: "needs_reconnect",
       }));
-      setItems([...failed, ...reconnect]);
+      let next = [...failed, ...reconnect];
+      if (!prefs.notifyOnFailedPost) next = next.filter((i) => i.kind !== "failed");
+      if (!prefs.notifyOnNeedsReconnect) next = next.filter((i) => i.kind !== "needs_reconnect");
+      setItems(next);
     } catch {
       // Non-fatal — the bell just shows no unread items if the fetch fails.
     } finally {

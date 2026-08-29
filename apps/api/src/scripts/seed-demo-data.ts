@@ -486,6 +486,42 @@ async function main() {
     await cleanupUserData(userId);
 
     // ---------------------------------------------------------------
+    // 0. Workspace + notification preferences — both are keyed on the auth
+    //    user (not touched by cleanupUserData). Pin them to a known demo
+    //    state so reseeds are deterministic.
+    // ---------------------------------------------------------------
+    console.log("[seed] pinning workspace + notification preferences...");
+    {
+      const { data: ws, error: wsSelErr } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("owner_user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (wsSelErr) throw new Error(`Failed to look up workspace: ${wsSelErr.message}`);
+
+      if (ws?.id) {
+        const { error } = await supabase
+          .from("workspaces")
+          .update({ name: "RichFeed Demo" })
+          .eq("id", ws.id);
+        if (error) throw new Error(`Failed to reset workspace name: ${error.message}`);
+      } else {
+        const { error } = await supabase
+          .from("workspaces")
+          .insert({ name: "RichFeed Demo", owner_user_id: userId });
+        if (error) throw new Error(`Failed to create workspace: ${error.message}`);
+      }
+
+      const { error: npErr } = await supabase.from("notification_preferences").upsert(
+        { user_id: userId, notify_on_failed_post: true, notify_on_needs_reconnect: true },
+        { onConflict: "user_id" },
+      );
+      if (npErr) throw new Error(`Failed to reset notification preferences: ${npErr.message}`);
+    }
+
+    // ---------------------------------------------------------------
     // 1. social_accounts
     // ---------------------------------------------------------------
     console.log("[seed] inserting social_accounts...");

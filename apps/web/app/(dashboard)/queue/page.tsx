@@ -52,12 +52,13 @@ function QueueContent() {
     (offset: number) => {
       const params = new URLSearchParams();
       if (statuses.length > 0) params.set("status", statuses.join(","));
+      if (platforms.length > 0) params.set("platform", platforms.join(","));
       params.set("limit", String(PAGE_SIZE));
       params.set("offset", String(offset));
       params.set("sort", sortDir);
       return apiFetch<PostsPage>(`/api/posts?${params.toString()}`);
     },
-    [statuses, sortDir],
+    [statuses, platforms, sortDir],
   );
 
   /** Merge a fresh page of posts into the accumulated set, deduping targets by id. */
@@ -156,14 +157,16 @@ function QueueContent() {
     }
   }
 
-  const allRows = flattenToQueueRows(posts ?? [], platforms);
+  // Platform + status filtering is now fully server-side (GET /api/posts
+  // ?platform&status), so every loaded row is already a match and the "N
+  // remaining" count below is exact.
+  const allRows = flattenToQueueRows(posts ?? []);
   const rows = useMemo(() => {
     const next = [...allRows];
     if (sortDir === "desc") next.reverse(); // flattenToQueueRows is already soonest-first (asc)
     return next;
   }, [allRows, sortDir]);
   const hasMore = serverHasMore;
-  // Client-side platform filter can hide some loaded rows, so clamp at 0.
   const remaining = Math.max(0, total - allRows.length);
 
   return (

@@ -140,7 +140,55 @@ the session to `e2e/.auth/user.json` so GoTrue's `/token` isn't hammered; auth
 specs opt out. Read specs (01–09) must run before write specs (10–14) within a
 run.
 
-## 2026-08-29 — docs/brain is maintained continuously, not reconstructed _(this commit)_
+## 2026-08-29 — `workspaces` is a real table; `user_metadata.workspace_name` is retired
+
+Workspace name moved off Supabase Auth `user_metadata` into a `workspaces`
+table (migration `0002`) so workspace-level settings have a real home. One
+workspace per user, `owner_user_id`-scoped, auto-created by a `SECURITY
+DEFINER` trigger on `auth.users` insert (name from `user_metadata.workspace_name`
+→ email local-part → "My Workspace") and backfilled in-migration for existing
+users. RLS deliberately exposes **select + update only** — workspace creation is
+automatic and deletion isn't a feature, so there's no user-facing insert/delete
+path. Reason: the stopgap was explicitly flagged as temporary since Step 3.
+
+## 2026-08-29 — media_type comes from real file types, not upload count
+
+Compose/Post-detail used to guess `media_type` as `count > 1 ? carousel :
+image`. Now `POST /api/media` reads back the content-type Supabase Storage
+serves (HEAD on the public URL), the uploader tracks a real image/video `kind`
+per file (browser `File.type` cross-checked against Storage's), and
+`deriveMediaType` maps them (1 image → image, N images → carousel, 1 video →
+video) or raises an inline validation error for a mixed/multi-video selection
+that blocks save. Reason: the guess was a known Step-3 deviation and silently
+mislabelled every video post as an image.
+
+## 2026-08-29 — Queue platform filtering is server-side
+
+`GET /api/posts` gained a `?platform=` filter (CSV, inner-joins
+`social_accounts` so the exact `count` reflects it). Queue sends its platform
+filter through instead of filtering already-paginated rows client-side, which is
+what made the "N remaining" count approximate under a platform filter. Reason:
+a corner Step 6 deliberately cut.
+
+## 2026-08-29 — Notification preferences: persist, don't deliver
+
+`notification_preferences` table (migration `0003`) + `GET`/`PATCH
+/api/notification-preferences` + a real Settings toggle panel, storing
+`notify_on_failed_post` / `notify_on_needs_reconnect`. NotificationBell honours
+them for its in-app list. Actual email/push delivery is explicitly out of scope
+— no provider, no new dependency — so the toggles currently only gate the bell.
+Reason: scoped honestly to what's buildable without an email integration.
+
+## 2026-08-29 — Migrations get a tracked runner (`pnpm --filter api migrate`)
+
+`apps/api/src/scripts/apply-migrations.ts` applies `supabase/migrations/*.sql`
+in order over a direct `pg`/`DATABASE_URL` connection (DDL can't go through
+PostgREST), tracked in `schema_migrations`; `0001` (applied by hand via the
+Supabase SQL editor before this existed) is auto-baselined. Reason: `0002`/`0003`
+needed a repeatable, reviewable apply path, and CLAUDE.md wants reusable tools in
+`scripts/` rather than re-authored one-offs.
+
+## 2026-08-29 — docs/brain is maintained continuously, not reconstructed _(originally this commit)_
 
 This folder was created as a living record. The convention (see `README.md`):
 every future build step updates the relevant `docs/brain` files as part of its

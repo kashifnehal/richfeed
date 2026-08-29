@@ -67,6 +67,7 @@ export const listPostsQuerySchema = z.object({
   status: z
     .union([postTargetStatusSchema, z.array(postTargetStatusSchema)])
     .optional(),
+  platform: z.union([platformSchema, z.array(platformSchema)]).optional(),
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),
 });
@@ -100,3 +101,29 @@ export const duplicatePostBodySchema = z.object({
   publishAt: z.string().datetime({ offset: true }),
 });
 export type DuplicatePostBody = z.infer<typeof duplicatePostBodySchema>;
+
+// ---------------------------------------------------------------------
+// Workspace
+// ---------------------------------------------------------------------
+
+export const patchWorkspaceBodySchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+export type PatchWorkspaceBody = z.infer<typeof patchWorkspaceBodySchema>;
+
+// ---------------------------------------------------------------------
+// Notification preferences
+// ---------------------------------------------------------------------
+
+export const patchNotificationPreferencesBodySchema = z
+  .object({
+    notifyOnFailedPost: z.boolean().optional(),
+    notifyOnNeedsReconnect: z.boolean().optional(),
+  })
+  .refine(
+    (v) => v.notifyOnFailedPost !== undefined || v.notifyOnNeedsReconnect !== undefined,
+    { message: "Provide at least one preference to update" },
+  );
+export type PatchNotificationPreferencesBody = z.infer<
+  typeof patchNotificationPreferencesBodySchema
+>;

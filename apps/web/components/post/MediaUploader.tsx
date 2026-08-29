@@ -4,14 +4,21 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState, type DragEvent, type ReactElement } from "react";
 import { useToast } from "../shared/Toast";
 import { uploadMedia } from "../../lib/api";
+import { kindFromMime, type MediaItem } from "../../lib/media";
 
 export interface MediaUploaderProps {
-  mediaUrls: string[];
-  onChange: (urls: string[]) => void;
+  items: MediaItem[];
+  onChange: (items: MediaItem[]) => void;
 }
 
-/** Drag-and-drop uploader with a reorderable thumbnail grid. Real uploads go to Supabase Storage via POST /api/media. */
-export function MediaUploader({ mediaUrls, onChange }: MediaUploaderProps): ReactElement {
+/**
+ * Drag-and-drop uploader with a reorderable thumbnail grid. Real uploads go to
+ * Supabase Storage via POST /api/media; each item's kind (image/video) comes
+ * from the browser File's type cross-checked against the content-type Storage
+ * recorded, so the post's media_type is derived from what the files actually
+ * are, not from how many there are.
+ */
+export function MediaUploader({ items, onChange }: MediaUploaderProps): ReactElement {
   const { showToast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -22,8 +29,36 @@ export function MediaUploader({ mediaUrls, onChange }: MediaUploaderProps): Reac
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const uploaded = await Promise.all(Array.from(files).map((file) => uploadMedia(file)));
-      onChange([...mediaUrls, ...uploaded.map((u) => u.url)]);
+      const settled = await Promise.all(
+        Array.from(files).map(async (file) => {
+          const browserKind = kindFromMime(file.type);
+          const uploaded = await uploadMedia(file);
+          const storageKind = kindFromMime(uploaded.contentType);
+          return { name: file.name, url: uploaded.url, browserKind, storageKind };
+        }),
+      );
+
+      const accepted: MediaItem[] = [];
+      const rejected: string[] = [];
+      for (const r of settled) {
+        // Prefer what Storage will actually serve; fall back to the browser's
+        // declared type. Reject anything that's neither image nor video, or
+        // where the two sources disagree on that axis (can't trust the guess).
+        const kind =
+          r.storageKind && r.browserKind && r.storageKind !== r.browserKind
+            ? null
+            : (r.storageKind ?? r.browserKind);
+        if (kind) accepted.push({ url: r.url, kind });
+        else rejected.push(r.name);
+      }
+
+      if (accepted.length > 0) onChange([...items, ...accepted]);
+      if (rejected.length > 0) {
+        showToast(
+          `Couldn't add ${rejected.join(", ")} — images and video only.`,
+          "error",
+        );
+      }
     } catch {
       showToast("Couldn't upload media. Try again.", "error");
     } finally {
@@ -38,12 +73,12 @@ export function MediaUploader({ mediaUrls, onChange }: MediaUploaderProps): Reac
   }
 
   function removeAt(index: number) {
-    onChange(mediaUrls.filter((_, i) => i !== index));
+    onChange(items.filter((_, i) => i !== index));
   }
 
   function reorder(from: number, to: number) {
     if (from === to) return;
-    const next = [...mediaUrls];
+    const next = [...items];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved!);
     onChange(next);
@@ -82,11 +117,11 @@ export function MediaUploader({ mediaUrls, onChange }: MediaUploaderProps): Reac
         />
       </div>
 
-      {mediaUrls.length > 0 ? (
+      {items.length > 0 ? (
         <div className="grid grid-cols-4 gap-2">
-          {mediaUrls.map((url, index) => (
+          {items.map((item, index) => (
             <div
-              key={url}
+              key={item.url}
               draggable
               onDragStart={() => setDragIndex(index)}
               onDragOver={(e) => e.preventDefault()}
@@ -96,8 +131,12 @@ export function MediaUploader({ mediaUrls, onChange }: MediaUploaderProps): Reac
               }}
               className="group relative aspect-square overflow-hidden rounded-control border border-subtle-2 bg-surface"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded remote media, not worth Image config for a thumbnail grid */}
-              <img src={url} alt="" className="h-full w-full object-cover" />
+              {item.kind === "video" ? (
+                <video src={item.url} className="h-full w-full object-cover" muted />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- user-uploaded remote media, not worth Image config for a thumbnail grid
+                <img src={item.url} alt="" className="h-full w-full object-cover" />
+              )}
               <button
                 type="button"
                 aria-label="Remove media"

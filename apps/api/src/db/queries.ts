@@ -1,11 +1,13 @@
 import type {
   AccountStatus,
   MediaType,
+  NotificationPreferencesDto,
   Platform,
   PostTargetDto,
   PostTargetStatus,
   ScheduledPostDto,
   SocialAccountDto,
+  WorkspaceDto,
 } from "@richfeed/shared";
 import { getSupabaseClient } from "./supabase";
 
@@ -376,6 +378,8 @@ export async function deleteSocialAccount(userId: string, id: string): Promise<b
 
 export interface ListPostsFilters {
   statuses?: PostTargetStatus[];
+  /** Filter to targets whose social account is on one of these platforms. */
+  platforms?: Platform[];
   from?: string;
   to?: string;
 }
@@ -418,9 +422,17 @@ export async function listScheduledPostTargetsPage(
   const limit = Math.max(1, filters.limit);
   const ascending = filters.sort !== "desc";
 
+  // When filtering by platform we need an inner join to social_accounts so the
+  // `.in(social_accounts.platform, ...)` filter (and the exact count) actually
+  // constrains the row set, not just the embedded payload. Kept as two string
+  // literals (not an interpolation) so the client keeps its select typing.
+  const select = filters.platforms?.length
+    ? "*, social_accounts!inner(*), publish_attempts(*), scheduled_posts!inner(*)"
+    : "*, social_accounts(*), publish_attempts(*), scheduled_posts!inner(*)";
+
   let query = getSupabaseClient()
     .from("post_targets")
-    .select(`${TARGET_EMBED}, scheduled_posts!inner(*)`, { count: "exact" })
+    .select(select, { count: "exact" })
     .eq("scheduled_posts.user_id", userId)
     .order("publish_at", { ascending })
     // Stable tiebreak so rows never shuffle between pages when publish_at ties.
@@ -429,6 +441,9 @@ export async function listScheduledPostTargetsPage(
 
   if (filters.statuses?.length) {
     query = query.in("status", filters.statuses);
+  }
+  if (filters.platforms?.length) {
+    query = query.in("social_accounts.platform", filters.platforms);
   }
   if (filters.from) {
     query = query.gte("publish_at", filters.from);
@@ -449,7 +464,7 @@ export async function listScheduledPostTargetsPage(
     throw new DbError(`Failed to page posts for user ${userId}: ${error.message}`, error);
   }
 
-  const rows = (data as PostTargetWithPostRawRow[]) ?? [];
+  const rows = (data as unknown as PostTargetWithPostRawRow[]) ?? [];
   const byPostId = new Map<string, ScheduledPostDto>();
   const order: string[] = [];
   for (const row of rows) {
@@ -474,19 +489,33 @@ export async function listScheduledPostsWithTargets(
   userId: string,
   filters: ListPostsFilters = {},
 ): Promise<ScheduledPostDto[]> {
-  const hasTargetFilter = Boolean(filters.statuses?.length || filters.from || filters.to);
-  const targetsSelect = hasTargetFilter
-    ? `post_targets!inner(${TARGET_EMBED})`
-    : `post_targets(${TARGET_EMBED})`;
+  const hasTargetFilter = Boolean(
+    filters.statuses?.length || filters.platforms?.length || filters.from || filters.to,
+  );
+  // Inner-join post_targets when any target-level filter is active, and
+  // inner-join social_accounts on top of that only when filtering by platform,
+  // so filters actually drop non-matching rows rather than just emptying the
+  // embed. Spelled out as literals so the client keeps its select typing.
+  let select: string;
+  if (filters.platforms?.length) {
+    select = "*, post_targets!inner(*, social_accounts!inner(*), publish_attempts(*))";
+  } else if (hasTargetFilter) {
+    select = "*, post_targets!inner(*, social_accounts(*), publish_attempts(*))";
+  } else {
+    select = "*, post_targets(*, social_accounts(*), publish_attempts(*))";
+  }
 
   let query = getSupabaseClient()
     .from("scheduled_posts")
-    .select(`*, ${targetsSelect}`)
+    .select(select)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (filters.statuses?.length) {
     query = query.in("post_targets.status", filters.statuses);
+  }
+  if (filters.platforms?.length) {
+    query = query.in("post_targets.social_accounts.platform", filters.platforms);
   }
   if (filters.from) {
     query = query.gte("post_targets.publish_at", filters.from);
@@ -501,7 +530,7 @@ export async function listScheduledPostsWithTargets(
     throw new DbError(`Failed to list posts for user ${userId}: ${error.message}`, error);
   }
 
-  return ((data as ScheduledPostRawRow[]) ?? []).map(mapPost);
+  return ((data as unknown as ScheduledPostRawRow[]) ?? []).map(mapPost);
 }
 
 export async function getScheduledPostDetail(
@@ -838,6 +867,156 @@ export async function getUpcomingPreview(userId: string, limit = 5): Promise<Pos
   }
 
   return ((data as PostTargetRawRow[]) ?? []).map(mapTarget);
+}
+
+// ----- Workspace -----------------------------------------------------
+
+interface WorkspaceRawRow {
+  id: string;
+  name: string;
+  owner_user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapWorkspace(row: WorkspaceRawRow): WorkspaceDto {
+  return {
+    id: row.id,
+    name: row.name,
+    ownerUserId: row.owner_user_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function selectWorkspace(userId: string): Promise<WorkspaceRawRow | null> {
+  const { data, error } = await getSupabaseClient()
+    .from("workspaces")
+    .select("*")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new DbError(`Failed to load workspace for user ${userId}: ${error.message}`, error);
+  }
+  return (data as WorkspaceRawRow | null) ?? null;
+}
+
+/**
+ * Returns the user's workspace, creating one if it's somehow missing (the
+ * `on_auth_user_created_create_workspace` trigger + the 0002 backfill mean
+ * this practically never fires, but a user created in the gap between the two
+ * would have none).
+ */
+export async function ensureWorkspaceForUser(
+  userId: string,
+  fallbackName: string,
+): Promise<WorkspaceDto> {
+  const existing = await selectWorkspace(userId);
+  if (existing) return mapWorkspace(existing);
+
+  const { data, error } = await getSupabaseClient()
+    .from("workspaces")
+    .insert({ name: fallbackName, owner_user_id: userId })
+    .select()
+    .single();
+
+  if (error) {
+    throw new DbError(`Failed to create workspace for user ${userId}: ${error.message}`, error);
+  }
+  return mapWorkspace(data as WorkspaceRawRow);
+}
+
+export async function updateWorkspaceName(
+  userId: string,
+  name: string,
+  fallbackName: string,
+): Promise<WorkspaceDto> {
+  // Make sure a row exists first, then rename it (scoped to the owner).
+  const workspace = await ensureWorkspaceForUser(userId, fallbackName);
+
+  const { data, error } = await getSupabaseClient()
+    .from("workspaces")
+    .update({ name })
+    .eq("id", workspace.id)
+    .eq("owner_user_id", userId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new DbError(`Failed to rename workspace ${workspace.id}: ${error.message}`, error);
+  }
+  return mapWorkspace(data as WorkspaceRawRow);
+}
+
+// ----- Notification preferences -------------------------------------
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferencesDto = {
+  notifyOnFailedPost: true,
+  notifyOnNeedsReconnect: true,
+};
+
+interface NotificationPreferencesRawRow {
+  user_id: string;
+  notify_on_failed_post: boolean;
+  notify_on_needs_reconnect: boolean;
+}
+
+export async function getNotificationPreferences(
+  userId: string,
+): Promise<NotificationPreferencesDto> {
+  const { data, error } = await getSupabaseClient()
+    .from("notification_preferences")
+    .select("notify_on_failed_post, notify_on_needs_reconnect")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DbError(
+      `Failed to load notification preferences for user ${userId}: ${error.message}`,
+      error,
+    );
+  }
+
+  const row = data as Pick<
+    NotificationPreferencesRawRow,
+    "notify_on_failed_post" | "notify_on_needs_reconnect"
+  > | null;
+
+  if (!row) return { ...DEFAULT_NOTIFICATION_PREFERENCES };
+  return {
+    notifyOnFailedPost: row.notify_on_failed_post,
+    notifyOnNeedsReconnect: row.notify_on_needs_reconnect,
+  };
+}
+
+export async function upsertNotificationPreferences(
+  userId: string,
+  patch: Partial<NotificationPreferencesDto>,
+): Promise<NotificationPreferencesDto> {
+  const current = await getNotificationPreferences(userId);
+  const next: NotificationPreferencesDto = { ...current, ...patch };
+
+  const { error } = await getSupabaseClient()
+    .from("notification_preferences")
+    .upsert(
+      {
+        user_id: userId,
+        notify_on_failed_post: next.notifyOnFailedPost,
+        notify_on_needs_reconnect: next.notifyOnNeedsReconnect,
+      },
+      { onConflict: "user_id" },
+    );
+
+  if (error) {
+    throw new DbError(
+      `Failed to save notification preferences for user ${userId}: ${error.message}`,
+      error,
+    );
+  }
+  return next;
 }
 
 export async function listUpcomingTargets(

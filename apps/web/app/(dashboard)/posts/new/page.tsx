@@ -11,6 +11,7 @@ import { MediaUploader } from "../../../../components/post/MediaUploader";
 import { PlatformPreviewCard } from "../../../../components/post/PlatformPreviewCard";
 import { TargetRow } from "../../../../components/post/TargetRow";
 import { apiFetch } from "../../../../lib/api";
+import { deriveMediaType, type MediaItem } from "../../../../lib/media";
 
 interface TargetMeta {
   publishAt: string;
@@ -30,7 +31,7 @@ export default function ComposePage() {
   const [accounts, setAccounts] = useState<SocialAccountDto[] | null>(null);
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState<string[]>([]);
-  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [targetMeta, setTargetMeta] = useState<Record<string, TargetMeta>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -68,11 +69,16 @@ export default function ComposePage() {
     [accounts, selectedIds],
   );
 
-  const mediaType = mediaUrls.length === 0 ? null : mediaUrls.length > 1 ? "carousel" : "image";
+  const mediaUrls = useMemo(() => media.map((m) => m.url), [media]);
+  const { mediaType, error: mediaError } = useMemo(() => deriveMediaType(media), [media]);
 
   async function handleSave(mode: "queue" | "draft") {
     if (mode === "queue" && selectedIds.length === 0) {
       setValidationError("Select at least one account");
+      return;
+    }
+    if (mediaError) {
+      setValidationError(mediaError);
       return;
     }
 
@@ -110,7 +116,12 @@ export default function ComposePage() {
         <section className="flex flex-col gap-4 rounded-card border border-subtle-2 bg-surface p-5">
           <CaptionEditor value={caption} onChange={setCaption} />
           <HashtagInput hashtags={hashtags} onChange={setHashtags} />
-          <MediaUploader mediaUrls={mediaUrls} onChange={setMediaUrls} />
+          <MediaUploader items={media} onChange={setMedia} />
+          {mediaError ? (
+            <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
+              {mediaError}
+            </p>
+          ) : null}
         </section>
 
         <section className="flex flex-col gap-3">

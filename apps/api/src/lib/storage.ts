@@ -39,6 +39,13 @@ export async function ensureMediaBucket(): Promise<void> {
 export interface UploadedMedia {
   url: string;
   path: string;
+  /**
+   * The content-type Supabase Storage actually recorded / will serve for this
+   * object (read back via a HEAD on the public URL), falling back to the
+   * request's declared mimetype if that read fails. The client cross-checks
+   * this against the browser File's own type to decide image vs. video.
+   */
+  contentType: string;
 }
 
 export async function uploadMedia(
@@ -63,6 +70,18 @@ export async function uploadMedia(
   }
 
   const { data: publicUrlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+  const url = publicUrlData.publicUrl;
 
-  return { url: publicUrlData.publicUrl, path };
+  // Read back what Storage will actually serve, so media_type isn't derived
+  // from a mimetype the browser merely claimed. Non-fatal if unreachable.
+  let recordedContentType = contentType;
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    const served = head.headers.get("content-type");
+    if (served) recordedContentType = served.split(";")[0]!.trim();
+  } catch {
+    // keep the declared mimetype
+  }
+
+  return { url, path, contentType: recordedContentType };
 }

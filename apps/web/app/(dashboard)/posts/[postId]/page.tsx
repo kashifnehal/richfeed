@@ -14,6 +14,7 @@ import { PlatformPreviewCard } from "../../../../components/post/PlatformPreview
 import { DuplicateDialog } from "../../../../components/post/DuplicateDialog";
 import { PublishAttemptLog } from "../../../../components/post/PublishAttemptLog";
 import { apiFetch, ApiError } from "../../../../lib/api";
+import { deriveMediaType, itemsFromUrls, type MediaItem } from "../../../../lib/media";
 import { PLATFORM_LABELS, platformToBadge } from "../../../../lib/platform";
 import { targetStatusToPill, targetStatusLabel } from "../../../../lib/status";
 import { RescheduleDialog } from "./_components/RescheduleDialog";
@@ -29,7 +30,7 @@ export default function PostDetailPage() {
 
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState<string[]>([]);
-  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [savingFields, setSavingFields] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -39,7 +40,7 @@ export default function PostDetailPage() {
         setPost(res.post);
         setCaption(res.post.caption ?? "");
         setHashtags(res.post.hashtags ?? []);
-        setMediaUrls(res.post.mediaUrls ?? []);
+        setMedia(itemsFromUrls(res.post.mediaUrls ?? []));
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) setNotFound(true);
@@ -53,7 +54,14 @@ export default function PostDetailPage() {
     load();
   }, [load]);
 
+  const mediaUrls = media.map((m) => m.url);
+  const { mediaType, error: mediaError } = deriveMediaType(media);
+
   async function handleSaveFields() {
+    if (mediaError) {
+      showToast(mediaError, "error");
+      return;
+    }
     setSavingFields(true);
     try {
       await apiFetch(`/api/posts/${postId}`, {
@@ -63,7 +71,7 @@ export default function PostDetailPage() {
           caption: caption || null,
           hashtags: hashtags.length > 0 ? hashtags : null,
           mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
-          mediaType: mediaUrls.length === 0 ? null : mediaUrls.length > 1 ? "carousel" : "image",
+          mediaType,
         }),
       });
       showToast("Changes saved.", "success");
@@ -160,10 +168,15 @@ export default function PostDetailPage() {
           <section className="flex flex-col gap-4 rounded-card border border-subtle-2 bg-surface p-5">
             <CaptionEditor value={caption} onChange={setCaption} />
             <HashtagInput hashtags={hashtags} onChange={setHashtags} />
-            <MediaUploader mediaUrls={mediaUrls} onChange={setMediaUrls} />
+            <MediaUploader items={media} onChange={setMedia} />
+            {mediaError ? (
+              <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
+                {mediaError}
+              </p>
+            ) : null}
             <button
               type="button"
-              disabled={savingFields}
+              disabled={savingFields || Boolean(mediaError)}
               onClick={() => void handleSaveFields()}
               className="self-start rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
             >

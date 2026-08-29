@@ -1,32 +1,46 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
+import type { WorkspaceDto } from "@richfeed/shared";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 import { Input } from "../../../../components/shared/Input";
 import { useToast } from "../../../../components/shared/Toast";
-import { createClient } from "../../../../lib/supabase/client";
+import { apiFetch } from "../../../../lib/api";
 
 /**
- * The Step 2 schema has no `workspaces` table yet (single-tenant-shaped for
- * now, multi-tenant-ready later), so the workspace name is stored on the
- * user's own Supabase Auth metadata rather than a separate row. Swap this
- * for a real workspaces table once one exists.
+ * Workspace name now lives in the `workspaces` table (one per user, owner-only
+ * RLS), read/written through GET/PATCH /api/workspace. It used to be stashed on
+ * Supabase Auth user_metadata — that path is gone.
  */
-export function WorkspacePanel({ user }: { user: User }): ReactElement {
+export function WorkspacePanel(): ReactElement {
   const { showToast } = useToast();
   const router = useRouter();
-  const [name, setName] = useState((user.user_metadata?.workspace_name as string) ?? "");
+  const [name, setName] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiFetch<{ workspace: WorkspaceDto }>("/api/workspace")
+      .then((res) => setName(res.workspace.name))
+      .catch(() => showToast("Couldn't load your workspace.", "error"))
+      .finally(() => setLoaded(true));
+  }, []);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ data: { workspace_name: name } });
-    setSaving(false);
-    showToast(error ? "Couldn't save workspace name." : "Workspace name saved.", error ? "error" : "success");
-    if (!error) router.refresh();
+    try {
+      await apiFetch("/api/workspace", {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      });
+      showToast("Workspace name saved.", "success");
+      router.refresh();
+    } catch {
+      showToast("Couldn't save workspace name.", "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -36,11 +50,12 @@ export function WorkspacePanel({ user }: { user: User }): ReactElement {
         label="Workspace name"
         name="workspace_name"
         value={name}
+        disabled={!loaded}
         onChange={(e) => setName(e.target.value)}
       />
       <button
         type="submit"
-        disabled={saving}
+        disabled={saving || !loaded || name.trim().length === 0}
         className="self-start rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
       >
         {saving ? "Saving..." : "Save workspace"}

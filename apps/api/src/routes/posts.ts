@@ -3,7 +3,9 @@ import {
   createPostBodySchema,
   duplicatePostBodySchema,
   patchPostBodySchema,
+  platformSchema,
   postTargetStatusSchema,
+  type Platform,
   type PostTargetStatus,
 } from "@richfeed/shared";
 import { requireUser, sendUnauthorized } from "../lib/auth";
@@ -27,6 +29,14 @@ function parseStatusQuery(raw: unknown): PostTargetStatus[] | undefined {
   return valid.length > 0 ? valid.map((p) => p.data) : undefined;
 }
 
+function parsePlatformQuery(raw: unknown): Platform[] | undefined {
+  if (raw === undefined) return undefined;
+  const values = Array.isArray(raw) ? raw : String(raw).split(",");
+  const parsed = values.map((v) => platformSchema.safeParse(v));
+  const valid = parsed.filter((p): p is { success: true; data: Platform } => p.success);
+  return valid.length > 0 ? valid.map((p) => p.data) : undefined;
+}
+
 /** Parses a non-negative integer query param, or undefined if absent/invalid. */
 function parseNonNegInt(raw: unknown): number | undefined {
   if (raw === undefined) return undefined;
@@ -46,6 +56,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
   app.get<{
     Querystring: {
       status?: string;
+      platform?: string;
       from?: string;
       to?: string;
       limit?: string;
@@ -56,6 +67,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
     try {
       const user = await requireUser(request);
       const statuses = parseStatusQuery(request.query.status);
+      const platforms = parsePlatformQuery(request.query.platform);
       const from = request.query.from;
       const to = request.query.to;
 
@@ -65,6 +77,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
         const sort = request.query.sort === "desc" ? "desc" : "asc";
         const page = await listScheduledPostTargetsPage(user.id, {
           statuses,
+          platforms,
           from,
           to,
           limit,
@@ -77,7 +90,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
         };
       }
 
-      const posts = await listScheduledPostsWithTargets(user.id, { statuses, from, to });
+      const posts = await listScheduledPostsWithTargets(user.id, { statuses, platforms, from, to });
       return { posts };
     } catch (err) {
       sendUnauthorized(reply, err);

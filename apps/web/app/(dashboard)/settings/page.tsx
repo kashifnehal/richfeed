@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { createClient } from "../../../lib/supabase/client";
+import { NotificationsPanel } from "./_components/NotificationsPanel";
 import { ProfilePanel } from "./_components/ProfilePanel";
 import { WorkspacePanel } from "./_components/WorkspacePanel";
 
@@ -48,14 +49,9 @@ export default function SettingsPage() {
         ) : tab === "profile" ? (
           <ProfilePanel user={user} />
         ) : tab === "workspace" ? (
-          <WorkspacePanel user={user} />
+          <WorkspacePanel />
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <h2 className="text-sm font-semibold text-primary">Notifications</h2>
-            <p className="max-w-xs text-sm text-secondary">
-              Notification preferences are coming soon.
-            </p>
-          </div>
+          <NotificationsPanel />
         )}
       </div>
     </div>

@@ -4,7 +4,9 @@ import Fastify from "fastify";
 import { accountsRoutes } from "./routes/accounts";
 import { dashboardRoutes } from "./routes/dashboard";
 import { mediaRoutes } from "./routes/media";
+import { notificationsRoutes } from "./routes/notifications";
 import { postsRoutes } from "./routes/posts";
+import { workspaceRoutes } from "./routes/workspace";
 
 const app = Fastify({ logger: true });
 
@@ -20,6 +22,8 @@ await app.register(accountsRoutes);
 await app.register(postsRoutes);
 await app.register(dashboardRoutes);
 await app.register(mediaRoutes);
+await app.register(workspaceRoutes);
+await app.register(notificationsRoutes);
 
 const port = Number(process.env.PORT ?? 4000);
 

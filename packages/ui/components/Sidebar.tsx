@@ -189,8 +189,9 @@ export function Sidebar({
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-accent-muted-bg text-xs font-bold text-accent-muted-text">
             {workspaceName.slice(0, 2).toUpperCase()}
           </span>
-          <span className="flex flex-col leading-tight lg:hidden xl:flex">
-            <span className="text-sm font-semibold text-primary">{workspaceName}</span>
+          <span className="flex min-w-0 flex-col leading-tight lg:hidden xl:flex">
+            <span className="truncate text-sm font-semibold text-primary">{workspaceName}</span>
+            <span className="text-xs text-nav-inactive">Workspace Admin</span>
           </span>
         </div>
       </aside>

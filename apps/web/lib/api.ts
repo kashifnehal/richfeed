@@ -55,10 +55,17 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   return (await res.json()) as T;
 }
 
-export async function uploadMedia(file: File): Promise<{ url: string; path: string }> {
+export interface UploadMediaResult {
+  url: string;
+  path: string;
+  /** What Supabase Storage recorded as the object's content-type. */
+  contentType: string;
+}
+
+export async function uploadMedia(file: File): Promise<UploadMediaResult> {
   const form = new FormData();
   form.append("file", file);
-  return apiFetch<{ url: string; path: string }>("/api/media", {
+  return apiFetch<UploadMediaResult>("/api/media", {
     method: "POST",
     body: form,
   });

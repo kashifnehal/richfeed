@@ -151,6 +151,55 @@ already exist; it does not. No platform adapter of any kind exists yet, the
 worker publish step is still a stub, and there are no platform OAuth env vars.
 Drift noted in `DECISIONS.md`.
 
+## 2026-08-29 — Workspaces table, notification prefs, server-side platform filter, real MIME detection (commit TBD)
+
+What shipped: four gap-closers on the existing engine/UI, no platform/OAuth work.
+(1) **Real `workspaces` table** (migration `0002`): id / name / owner_user_id /
+timestamps, RLS select+update scoped to `owner_user_id = auth.uid()`, a
+`SECURITY DEFINER` `handle_new_user_workspace()` trigger on `auth.users` insert
+(names from `user_metadata.workspace_name` → email local-part → "My Workspace"),
+and an idempotent in-migration backfill for existing users. New
+`GET`/`PATCH /api/workspace`; Settings › Workspace and the layout + Sidebar
+footer ("_name_ / Workspace Admin") now read the table, not `user_metadata`.
+(2) **Real media MIME detection**: `POST /api/media` reads back the content-type
+Storage actually serves (HEAD on the public URL) and returns it; `MediaUploader`
+now tracks `{ url, kind }` per file (browser `File.type` cross-checked against
+that), and `lib/media.ts::deriveMediaType` maps 1 image → `image`, N images →
+`carousel`, 1 video → `video`, and mixed / multi-video → an inline validation
+error that blocks save. Replaces the old `mediaUrls.length > 1 ? carousel :
+image` guess in both Compose and Post-detail.
+(3) **Server-side platform filter for Queue**: `GET /api/posts?platform=` (CSV,
+paged and non-paged paths), inner-joining `social_accounts` so the exact `count`
+reflects the filter; Queue sends it through instead of filtering loaded rows
+client-side, so "N remaining" is now exact.
+(4) **Real notification preferences** (migration `0003`,
+`notification_preferences` table, per-user RLS): `GET`/`PATCH
+/api/notification-preferences` for `notify_on_failed_post` /
+`notify_on_needs_reconnect`; Settings › Notifications is a real toggle panel;
+NotificationBell filters its in-app list by them. No email/push — persistence
+only.
+Also: new `apps/api/src/scripts/apply-migrations.ts` + `pnpm --filter api
+migrate` — a tracked (`schema_migrations`) runner over `supabase/migrations/*`
+via `pg`/`DATABASE_URL`, baselining `0001` as already-applied. `seed-demo-data.ts`
+now pins the demo user's workspace name + notification prefs on every reseed.
+Verified live: migrations applied to hosted Supabase, backfill correct (5 users
+→ 5 workspaces, demo user kept "RichFeed Demo"), all four new endpoints
+exercised with a real JWT, platform filter counts confirmed exact, media upload
+content-type round-trips for png + mp4. `pnpm build` / `pnpm lint` / web+api
+`tsc` pass; no hardcoded hex.
+
+Deviations/known gaps: (a) Per the task, **no automated tests were added or
+updated** — verification was live curl + reading the code. The existing
+`e2e/08-settings.spec.ts` still asserts the old "Notification preferences are
+coming soon." copy and will fail until a future step updates it; left untouched
+deliberately. (b) `workspaces` has no insert/delete RLS policy — creation is
+trigger-only and deletion isn't a feature; the service-role API is the only
+other writer. (c) Post-detail infers existing media's kind from file extension
+(`kindFromUrl`) since a saved post only carries URLs; freshly uploaded files use
+the real content-type. (d) Calendar keeps its client-side platform filter even
+though the API now supports `?platform` there too — it's unpaginated so the
+count was never approximate.
+
 ---
 
 ## Template for future entries

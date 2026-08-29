@@ -76,3 +76,16 @@ export interface ScheduledPostDto {
   updatedAt: string;
   targets: PostTargetDto[];
 }
+
+export interface WorkspaceDto {
+  id: string;
+  name: string;
+  ownerUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationPreferencesDto {
+  notifyOnFailedPost: boolean;
+  notifyOnNeedsReconnect: boolean;
+}
