@@ -217,7 +217,7 @@ automation, one task per session, disable the unused claude.ai MCP connectors).
 Deviations/known gaps: none — `CLAUDE.md` only, no code or docs/brain content
 touched.
 
-## 2026-08-29 — Real PRODUCT.md / BUSINESS.md; platform tiers corrected (commit dc72af1)
+## 2026-08-29 — Real PRODUCT.md / BUSINESS.md; platform tiers corrected (commit 0f08ebb)
 
 What shipped: the hand-authored `PRODUCT.md` and `BUSINESS.md` replaced the
 placeholder stubs the folder shipped with in `fa76165`. `platforms/STATUS.md`'s
