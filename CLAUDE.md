@@ -53,13 +53,26 @@ yet. Optimize for forward progress over process:
 ## E2E smoke suite — run this at the end of every build step
 
 `pnpm test:e2e` (root) → Playwright, `apps/web/e2e/`, drives a real Chromium against the live local
-stack and real Supabase Auth. It signs in as the seeded demo user and asserts against the real seeded
-data (dashboard stats, attention list, 9 accounts, compose disabled-account rule, publish-attempt log,
-calendar month/week, queue server-side pagination + sort, settings tabs, responsive overflow at
-sm/md/lg). Credentials live in git-ignored `apps/web/.env.test` (`E2E_USER_EMAIL` / `E2E_USER_PASSWORD`);
-rotate with `pnpm --filter api create-demo-user -- --user <id> --password '<new>'` (now idempotent —
-resets an existing user instead of making a new one). Re-run `pnpm --filter api seed -- --user <id>` if
-the seeded data has drifted. The webServer block auto-starts `pnpm dev` if nothing is on :3000.
+stack and real Supabase Auth. Covers read paths (dashboard stats, attention list, 9 accounts, compose
+disabled-account rule, publish-attempt log, calendar month/week, queue server-side pagination + sort,
+settings tabs, responsive overflow at sm/md/lg) **and write paths** (create post → Queue, cancel /
+duplicate / reschedule a target, disconnect an account, notification-row nav, sign-up, forgot-password),
+with mutations verified server-side via the same REST API the app uses.
+
+- `e2e/global-setup.ts` **re-seeds the demo dataset from scratch before every run** (`pnpm --filter api
+  seed`) and clears the sign-up test's throwaway account, so the write-path tests can mutate freely.
+  Within one run, order matters (read specs 01–09 before write specs 10–14); across runs it's clean.
+- Config lives in git-ignored `apps/web/.env.test` (`E2E_USER_ID` / `E2E_USER_EMAIL` /
+  `E2E_USER_PASSWORD`, plus `E2E_SIGNUP_EMAIL` / `E2E_SIGNUP_PASSWORD`). See `.env.test.example`.
+  Rotate the password with `pnpm --filter api create-demo-user -- --user <id> --password '<new>'`
+  (idempotent — resets the existing user).
+- A `setup` project signs in once and saves the session to `e2e/.auth/user.json` (git-ignored); the
+  rest of the suite reuses it so GoTrue's `/token` endpoint isn't hammered. The auth specs opt out.
+- The webServer block auto-starts `pnpm dev` if nothing is on :3000.
+
+**Never run `pnpm build` while `pnpm dev` (or the E2E suite) is running** — `next build` and `next dev`
+share `apps/web/.next`, and a concurrent build corrupts the dev server's client bundle (sign-in stops
+hydrating; forms fall back to a native GET submit). Fix: kill dev, `rm -rf apps/web/.next`, restart.
 
 ## Design system — hard rule
 

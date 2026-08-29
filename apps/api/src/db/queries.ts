@@ -301,7 +301,64 @@ export async function listSocialAccounts(userId: string): Promise<SocialAccountD
 }
 
 export async function deleteSocialAccount(userId: string, id: string): Promise<boolean> {
-  const { data, error } = await getSupabaseClient()
+  const supabase = getSupabaseClient();
+
+  // Ownership check first — the delete below is filtered by user_id too, but
+  // we need to know up front whether the row exists to return 404 vs 200.
+  const { data: account, error: lookupErr } = await supabase
+    .from("social_accounts")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (lookupErr) {
+    throw new DbError(`Failed to look up social account ${id}: ${lookupErr.message}`, lookupErr);
+  }
+  if (!account) return false;
+
+  // post_targets.social_account_id has a plain (non-cascading) FK, so the
+  // account row can't be deleted while any target still references it.
+  // Disconnecting drops this account's targets (same hard-delete semantics
+  // as cancelling a target) in FK-safe order: publish_attempts -> targets ->
+  // the account. Parent scheduled_posts are left intact — a post that ends
+  // up with zero targets simply reverts to a draft-like state, which is an
+  // already-valid shape in this schema.
+  const { data: targets, error: targetsErr } = await supabase
+    .from("post_targets")
+    .select("id")
+    .eq("social_account_id", id);
+
+  if (targetsErr) {
+    throw new DbError(`Failed to list targets for account ${id}: ${targetsErr.message}`, targetsErr);
+  }
+
+  const targetIds = (targets ?? []).map((t) => t.id as string);
+  if (targetIds.length > 0) {
+    const { error: attemptsErr } = await supabase
+      .from("publish_attempts")
+      .delete()
+      .in("post_target_id", targetIds);
+    if (attemptsErr) {
+      throw new DbError(
+        `Failed to delete publish attempts for account ${id}: ${attemptsErr.message}`,
+        attemptsErr,
+      );
+    }
+
+    const { error: delTargetsErr } = await supabase
+      .from("post_targets")
+      .delete()
+      .in("id", targetIds);
+    if (delTargetsErr) {
+      throw new DbError(
+        `Failed to delete targets for account ${id}: ${delTargetsErr.message}`,
+        delTargetsErr,
+      );
+    }
+  }
+
+  const { data, error } = await supabase
     .from("social_accounts")
     .delete()
     .eq("id", id)
