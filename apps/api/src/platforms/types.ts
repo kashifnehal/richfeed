@@ -21,10 +21,13 @@ export interface PublishAccount {
 export interface PublishTarget {
   id: string;
   platformCaptionOverride: string | null;
+  /** ISO 8601 — only YouTube's adapter uses this today (its own status.publishAt scheduling). */
+  publishAt: string;
 }
 
 export interface PublishPost {
   caption: string | null;
+  hashtags: string[] | null;
   mediaUrls: string[] | null;
   mediaType: MediaType | null;
 }

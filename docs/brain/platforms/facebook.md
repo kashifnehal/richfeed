@@ -48,6 +48,12 @@ screen instead.
   (`platform='facebook'`), upserted on `(user_id, platform,
   platform_account_id)` same as every other platform's reconnect path. The
   pending record is deleted from Redis on confirm.
+- **Session boundary**: same connect-ticket flow as every other platform
+  now (`/start` takes `?ticket=`, not a raw access token) — see
+  `platforms/x.md`'s "session-boundary problem" writeup. The picker's own
+  `/pending/:id` and `/confirm` routes are unaffected — they're reached by
+  a normal authenticated fetch from an already-loaded page, so the usual
+  `Authorization` header applies there.
 - **Env vars**: `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`.
 - **Known scaling limit**: the pending payload is one Redis value holding
   every Page's encrypted token — fine for the realistic case (a handful of

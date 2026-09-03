@@ -32,6 +32,12 @@ else immediately, before any network call.
   `?error=instagram_personal_account`, never stored. A Personal account can
   authenticate fine but can never publish through this API, so storing it
   would just defer the failure to publish time with a worse error.
+- **Session boundary**: `/start` is a full-page navigation with no
+  `Authorization` header — as of 2026-09-03 it takes a one-time connect
+  ticket (`?ticket=`, minted by an authenticated `POST
+  /api/oauth/connect-ticket`) rather than a raw access token in the URL.
+  See `platforms/x.md`'s "session-boundary problem" writeup for the full
+  reasoning; every OAuth route shares this now.
 - **Env vars**: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`,
   `INSTAGRAM_REDIRECT_URI`.
 - No picker — the authenticated IG professional account connects directly,

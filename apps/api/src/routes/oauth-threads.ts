@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import { getUserFromAccessToken } from "../lib/auth";
 import { encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { frontendOrigin } from "../lib/frontend-origin";
 import { clearOAuthAttemptCookies, readOAuthAttemptCookies, setOAuthAttemptCookies } from "../lib/oauth-state";
 import { upsertSocialAccount } from "../db/queries";
+import { resolveConnectTicket } from "./oauth-connect-ticket";
 
 // Threads is its own app/credentials, its own OAuth entirely — genuinely
 // separate from both Facebook Login for Business and Instagram Login.
@@ -14,22 +15,16 @@ const LONG_LIVED_URL = "https://graph.threads.net/access_token";
 const IDENTITY_URL = "https://graph.threads.net/v1.0/me";
 const SCOPE = "threads_basic,threads_content_publish";
 
-// Deliberately NOT process.env.NEXT_PUBLIC_APP_URL — see oauth-x.ts.
-function frontendOrigin(): string {
-  return "http://localhost:3000";
-}
-
 function generateState(): string {
   return randomBytes(24).toString("base64url");
 }
 
 export async function oauthThreadsRoutes(app: FastifyInstance): Promise<void> {
-  // GET /api/oauth/threads/start — see oauth-x.ts for why this reads
-  // ?access_token instead of an Authorization header.
-  app.get<{ Querystring: { access_token?: string } }>("/api/oauth/threads/start", async (request, reply) => {
-    const token = request.query.access_token;
-    const user = token ? await getUserFromAccessToken(token) : null;
-    if (!user) {
+  // GET /api/oauth/threads/start — see oauth-x.ts / oauth-connect-ticket.ts
+  // for why this reads ?ticket instead of an Authorization header.
+  app.get<{ Querystring: { ticket?: string } }>("/api/oauth/threads/start", async (request, reply) => {
+    const userId = await resolveConnectTicket(request.query.ticket);
+    if (!userId) {
       return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
     }
 
@@ -44,7 +39,7 @@ export async function oauthThreadsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const state = generateState();
-    setOAuthAttemptCookies(request, reply, "threads", { state, userId: user.id });
+    setOAuthAttemptCookies(request, reply, "threads", { state, userId });
 
     const authorizeUrl =
       `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +

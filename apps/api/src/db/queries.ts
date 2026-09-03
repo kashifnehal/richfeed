@@ -169,7 +169,7 @@ export async function updatePostTargetStatus(
 
 export interface PublishJobContext {
   target: PostTargetRow;
-  post: { caption: string | null; mediaUrls: string[] | null; mediaType: MediaType | null };
+  post: { caption: string | null; hashtags: string[] | null; mediaUrls: string[] | null; mediaType: MediaType | null };
   account: SocialAccountFullRawRow;
 }
 
@@ -200,6 +200,7 @@ export async function getPublishJobContext(postTargetId: string): Promise<Publis
     target: row,
     post: {
       caption: row.scheduled_posts.caption,
+      hashtags: row.scheduled_posts.hashtags,
       mediaUrls: row.scheduled_posts.media_urls,
       mediaType: row.scheduled_posts.media_type as MediaType | null,
     },
@@ -421,6 +422,8 @@ export interface UpsertSocialAccountInput {
   /** Not every platform's identity call returns a human handle (e.g. a Facebook Page just has a name). */
   platformUsername?: string | null;
   displayName: string;
+  /** Not every identity call returns a profile picture (e.g. a Facebook Page). */
+  avatarUrl?: string | null;
   accessTokenEncrypted: string;
   /** Null for platforms with no separate refresh token (Instagram/Facebook/Threads all re-exchange the same long-lived token instead — see each platforms/*.md). */
   refreshTokenEncrypted?: string | null;
@@ -440,6 +443,7 @@ export async function upsertSocialAccount(input: UpsertSocialAccountInput): Prom
         platform_account_id: input.platformAccountId,
         platform_username: input.platformUsername ?? null,
         display_name: input.displayName,
+        avatar_url: input.avatarUrl ?? null,
         access_token: input.accessTokenEncrypted,
         refresh_token: input.refreshTokenEncrypted ?? null,
         token_expires_at: input.tokenExpiresAt ?? null,

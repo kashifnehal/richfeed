@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import { requireUser, getUserFromAccessToken, sendUnauthorized } from "../lib/auth";
+import { requireUser, sendUnauthorized } from "../lib/auth";
 import { encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { frontendOrigin } from "../lib/frontend-origin";
 import { clearOAuthAttemptCookies, readOAuthAttemptCookies, setOAuthAttemptCookies } from "../lib/oauth-state";
 import { deletePending, readPending, storePending } from "../lib/pending-store";
 import { upsertSocialAccount } from "../db/queries";
+import { resolveConnectTicket } from "./oauth-connect-ticket";
 
 const GRAPH_VERSION = "v26.0";
 const AUTHORIZE_URL = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`;
@@ -13,11 +15,6 @@ const TOKEN_URL = `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_toke
 const ACCOUNTS_URL = `https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`;
 const SCOPE = "pages_show_list,pages_read_engagement,pages_manage_posts,business_management";
 const PENDING_PREFIX = "facebook_pages";
-
-// Deliberately NOT process.env.NEXT_PUBLIC_APP_URL — see oauth-x.ts.
-function frontendOrigin(): string {
-  return "http://localhost:3000";
-}
 
 function generateState(): string {
   return randomBytes(24).toString("base64url");
@@ -36,12 +33,11 @@ interface PendingFacebookConnection {
 }
 
 export async function oauthFacebookRoutes(app: FastifyInstance): Promise<void> {
-  // GET /api/oauth/facebook/start — see oauth-x.ts for why this reads
-  // ?access_token instead of an Authorization header.
-  app.get<{ Querystring: { access_token?: string } }>("/api/oauth/facebook/start", async (request, reply) => {
-    const token = request.query.access_token;
-    const user = token ? await getUserFromAccessToken(token) : null;
-    if (!user) {
+  // GET /api/oauth/facebook/start — see oauth-x.ts / oauth-connect-ticket.ts
+  // for why this reads ?ticket instead of an Authorization header.
+  app.get<{ Querystring: { ticket?: string } }>("/api/oauth/facebook/start", async (request, reply) => {
+    const userId = await resolveConnectTicket(request.query.ticket);
+    if (!userId) {
       return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
     }
 
@@ -56,7 +52,7 @@ export async function oauthFacebookRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const state = generateState();
-    setOAuthAttemptCookies(request, reply, "facebook", { state, userId: user.id });
+    setOAuthAttemptCookies(request, reply, "facebook", { state, userId });
 
     const authorizeUrl =
       `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +

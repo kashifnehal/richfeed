@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react";
 import type { ReactElement } from "react";
 import type { Platform } from "@richfeed/shared";
 import { useToast } from "../../../../components/shared/Toast";
-import { createClient } from "../../../../lib/supabase/client";
+import { apiFetch } from "../../../../lib/api";
 import {
   ALL_PLATFORMS,
   COMING_SOON_PLATFORMS,
@@ -22,26 +22,24 @@ const OAUTH_SLUG: Partial<Record<Platform, string>> = {
   instagram: "instagram",
   facebook: "facebook",
   threads: "threads",
+  linkedin_personal: "linkedin",
+  youtube: "youtube",
 };
 
 export function ConnectAccountDialog(): ReactElement {
   const { showToast } = useToast();
 
   async function handleConnectOAuth(slug: string) {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
+    try {
+      // A one-time connect ticket (not the raw session token) — /start is a
+      // real full-page navigation, not a fetch, so it can't read an
+      // Authorization header; this bridges that without putting the actual
+      // access token in a URL/request log.
+      const { ticket } = await apiFetch<{ ticket: string }>("/api/oauth/connect-ticket", { method: "POST" });
+      window.location.href = `${API_URL}/api/oauth/${slug}/start?ticket=${encodeURIComponent(ticket)}`;
+    } catch {
       showToast("Sign in again to connect an account.", "error");
-      return;
     }
-
-    // A real full-page navigation, not a fetch — the platform's own consent
-    // screen has to actually render, which only happens if the browser
-    // leaves the SPA.
-    window.location.href = `${API_URL}/api/oauth/${slug}/start?access_token=${encodeURIComponent(session.access_token)}`;
   }
 
   function handleSelectPlatform(platform: Platform) {

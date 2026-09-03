@@ -311,6 +311,46 @@ click-throughs, and no real scheduled post to any of the three new
 platforms, could be driven manually in this environment (no live browser) —
 see the step's report for exactly what to click through.
 
+## 2026-09-03 — OAuth connect-ticket fixup; real LinkedIn + YouTube OAuth/publish — every Tier-1 platform now live (commit PENDING)
+
+What shipped, Task 0 (fixup): all six OAuth `/start` routes (X, Facebook,
+Instagram, Threads, and the two new ones below) now take a one-time connect
+ticket (`POST /api/oauth/connect-ticket`, backed by `lib/pending-store.ts`)
+instead of a raw Supabase access token in the URL — the Accounts page mints
+one via a normal authenticated fetch, then navigates with `?ticket=`
+instead of `?access_token=`. `lib/oauth-state.ts`'s PKCE verifier cookie was
+already optional; nothing else changed there. `lib/frontend-origin.ts` is a
+new shared helper reading `FRONTEND_ORIGIN` — replaces five hardcoded
+`"http://localhost:3000"` copies (four OAuth route files' `frontendOrigin()`
++ `server.ts`'s CORS origin) with one. See `platforms/x.md`'s
+"session-boundary problem" section for the full before/after.
+
+What shipped, Tasks 1-3: LinkedIn personal-profile and YouTube OAuth +
+publish, the last two Tier-1 platforms (per `PRODUCT.md`'s rollout
+priority) — `routes/oauth-linkedin.ts` / `platforms/linkedin.ts` and
+`routes/oauth-youtube.ts` / `platforms/youtube.ts`, both built directly on
+the corrected Task 0 pattern. `PublishTarget`/`PublishPost` (the shared
+adapter contract, `platforms/types.ts`) gained `publishAt` and `hashtags`
+respectively — only YouTube needs them so far (its own `status.publishAt`
+scheduling and video description), but every adapter's call site in
+`worker.ts` now passes both through uniformly. `UpsertSocialAccountInput`
+gained `avatarUrl` (LinkedIn's identity call returns a profile picture;
+nothing before it did).
+
+Deviations/known gaps: the build spec allowed a placeholder display name if
+YouTube's `youtube.upload` scope didn't permit reading channel info — in
+practice there's no other way to get a stable channel id
+(`platform_account_id`), so that call is treated as required, not
+best-effort (see `platforms/youtube.md`). The exact registered YouTube
+OAuth redirect URI in Google Cloud Console could not be confirmed from this
+environment (no console access) — built against the standard
+`http://localhost:4000/api/oauth/youtube/callback` path every other
+platform uses, flagged for the user to confirm/register before testing.
+LinkedIn's permalink pattern (`/feed/update/{id}/`) isn't a LinkedIn-
+documented convention — untested against a real published post (no live
+browser in this environment). Neither OAuth click-through, nor a real
+scheduled post to LinkedIn or YouTube, could be driven manually here.
+
 ## Template for future entries
 
 ```

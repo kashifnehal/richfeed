@@ -28,6 +28,8 @@ Text-only or single-image. Video and carousel fail immediately
   OAuth route has an equivalent identity call. Worth double-checking this
   exact endpoint shape against Meta's Threads API docs on first real
   connect.
+- **Session boundary**: same connect-ticket flow as every other platform
+  now — see `platforms/x.md`'s "session-boundary problem" writeup.
 - **Env vars**: `THREADS_APP_ID`, `THREADS_APP_SECRET`, `THREADS_REDIRECT_URI`.
 - No picker — one Threads profile per grant, same as X and Instagram.
 

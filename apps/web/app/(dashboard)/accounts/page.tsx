@@ -15,6 +15,8 @@ const CONNECT_SUCCESS_MESSAGES: Record<string, string> = {
   x: "X account connected.",
   instagram: "Instagram account connected.",
   threads: "Threads account connected.",
+  linkedin: "LinkedIn account connected.",
+  youtube: "YouTube channel connected.",
 };
 
 const CONNECT_ERROR_MESSAGES: Record<string, string> = {
@@ -29,6 +31,10 @@ const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   facebook_no_pages: "That Facebook account doesn't manage any Pages to connect.",
   threads_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
   threads_connect_failed: "Couldn't connect that Threads account. Please try again.",
+  linkedin_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  linkedin_connect_failed: "Couldn't connect that LinkedIn account. Please try again.",
+  youtube_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  youtube_connect_failed: "Couldn't connect that YouTube channel. Please try again.",
 };
 
 export default function AccountsPage() {

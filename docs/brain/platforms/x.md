@@ -46,25 +46,29 @@ Supabase session cookie" — doesn't work either: the web app's `@supabase/ssr`
 session cookie is scoped to the web app's own origin (`localhost:3000`), and
 this API is a different origin (`localhost:4000`); it's never sent here.
 
-The fix: the Accounts page reads its own Supabase session client-side and
-appends the access token as `?access_token=` on the navigation to `/start`.
-`/start` verifies it once (`getUserFromAccessToken`, factored out of
-`requireUser` in `lib/auth.ts` for exactly this reuse) and carries the
-resulting user id through the same short-lived httpOnly cookie that holds the
-PKCE state/verifier (`lib/oauth-state.ts`) across the redirect round-trip to
-X and back, so `/callback` never needs a live session of its own. Known
-trade-off: the access token briefly appears in the API's request URL (and
-therefore its request log) for that one navigation — acceptable for a
-local-only, no-real-users-yet tool (see `CLAUDE.md`), worth revisiting before
-any real deployment.
+The original fix (2026-09-03, since superseded — see below) had the Accounts
+page read its own Supabase session client-side and append the raw access
+token as `?access_token=` on the navigation to `/start`. That worked but put
+a real credential in a URL/request log for one hop. As of the same day's
+later commit, `/start` instead takes a one-time **connect ticket**: the
+Accounts page first does a normal authenticated `POST
+/api/oauth/connect-ticket` (a fetch, so the usual `Authorization` header
+applies), which mints a random opaque ticket via `lib/pending-store.ts`
+(30-60s TTL) storing just `{ userId }`, then navigates to
+`/start?ticket=<ticket>`. `/start` resolves it once via
+`resolveConnectTicket` (`routes/oauth-connect-ticket.ts` — read, then
+immediately delete; single-use) and carries the resulting user id through
+the same short-lived httpOnly cookie that holds the PKCE state/verifier
+(`lib/oauth-state.ts`) across the redirect round-trip to X and back, so
+`/callback` never needs a live session of its own.
 
-`frontendOrigin()` in `oauth-x.ts` is hardcoded to `http://localhost:3000`
-rather than read from `NEXT_PUBLIC_APP_URL` — that env var is already set in
-this environment's `.env` to a future production domain
-(`richfeed.social`) unrelated to local dev, and using it as-is would have
-silently redirected every successful/failed connect attempt off of
-localhost. Matches the CORS origin, which is hardcoded the same way in
-`server.ts`.
+`frontendOrigin()` (now `lib/frontend-origin.ts`, shared by every OAuth
+route + `server.ts`'s CORS config, one `FRONTEND_ORIGIN` env var instead of
+five hardcoded copies) is `http://localhost:3000` in this environment's
+`.env` — deliberately not `NEXT_PUBLIC_APP_URL`, which is already set to a
+future production domain (`richfeed.social`) unrelated to local dev; using
+it as-is would have silently redirected every successful/failed connect
+attempt off of localhost.
 
 ## Endpoints called for publish (`platforms/x.ts`)
 

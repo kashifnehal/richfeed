@@ -1,23 +1,16 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import { getUserFromAccessToken } from "../lib/auth";
 import { encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { frontendOrigin } from "../lib/frontend-origin";
 import { clearOAuthAttemptCookies, readOAuthAttemptCookies, setOAuthAttemptCookies } from "../lib/oauth-state";
 import { upsertSocialAccount } from "../db/queries";
+import { resolveConnectTicket } from "./oauth-connect-ticket";
 
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_USERS_ME_URL = "https://api.x.com/2/users/me?user.fields=profile_image_url";
 const X_SCOPE = "tweet.write%20tweet.read%20users.read%20media.write%20offline.access";
-
-// Deliberately NOT process.env.NEXT_PUBLIC_APP_URL — that's already set in
-// this environment's .env to a future production domain (richfeed.social)
-// unrelated to local dev, and this app has no deployment yet (see CLAUDE.md).
-// Matches the CORS origin already hardcoded the same way in server.ts.
-function frontendOrigin(): string {
-  return "http://localhost:3000";
-}
 
 function generateVerifier(): string {
   return randomBytes(32).toString("base64url");
@@ -38,16 +31,15 @@ export async function oauthXRoutes(app: FastifyInstance): Promise<void> {
   // (not a fetch — the browser has to actually land on X's consent screen),
   // so there's no Authorization header here, and no way to read the web
   // app's Supabase session cookie either — that cookie is scoped to the web
-  // app's own origin (localhost:3000), not this API's (localhost:4000).
-  // The caller reads its own session client-side and passes the access
-  // token as ?access_token; this route verifies it once and carries the
-  // resulting user id through the PKCE cookie round-trip (see
+  // app's own origin, not this API's. The caller first mints a one-time
+  // connect ticket via an authenticated fetch (oauth-connect-ticket.ts),
+  // then navigates here with ?ticket=; this route resolves it once and
+  // carries the resulting user id through the PKCE cookie round-trip (see
   // lib/oauth-state.ts) so /callback knows whose account to attach without
   // needing a live session of its own.
-  app.get<{ Querystring: { access_token?: string } }>("/api/oauth/x/start", async (request, reply) => {
-    const token = request.query.access_token;
-    const user = token ? await getUserFromAccessToken(token) : null;
-    if (!user) {
+  app.get<{ Querystring: { ticket?: string } }>("/api/oauth/x/start", async (request, reply) => {
+    const userId = await resolveConnectTicket(request.query.ticket);
+    if (!userId) {
       return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
     }
 
@@ -65,7 +57,7 @@ export async function oauthXRoutes(app: FastifyInstance): Promise<void> {
     const challenge = challengeFromVerifier(verifier);
     const state = generateState();
 
-    setOAuthAttemptCookies(request, reply, "x", { state, verifier, userId: user.id });
+    setOAuthAttemptCookies(request, reply, "x", { state, verifier, userId });
 
     const authorizeUrl =
       `${X_AUTHORIZE_URL}?response_type=code&client_id=${encodeURIComponent(clientId)}` +

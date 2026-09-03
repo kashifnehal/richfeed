@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import { getUserFromAccessToken } from "../lib/auth";
 import { encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { frontendOrigin } from "../lib/frontend-origin";
 import { clearOAuthAttemptCookies, readOAuthAttemptCookies, setOAuthAttemptCookies } from "../lib/oauth-state";
 import { upsertSocialAccount } from "../db/queries";
+import { resolveConnectTicket } from "./oauth-connect-ticket";
 
 // "Instagram API with Instagram Login" — its own standalone product with
 // its own App ID/OAuth flow, genuinely separate from Facebook Login for
@@ -15,23 +16,16 @@ const LONG_LIVED_URL = "https://graph.instagram.com/access_token";
 const IDENTITY_URL = "https://graph.instagram.com/v21.0/me";
 const SCOPE = "instagram_business_basic,instagram_business_content_publish";
 
-// Deliberately NOT process.env.NEXT_PUBLIC_APP_URL — see oauth-x.ts.
-function frontendOrigin(): string {
-  return "http://localhost:3000";
-}
-
 function generateState(): string {
   return randomBytes(24).toString("base64url");
 }
 
 export async function oauthInstagramRoutes(app: FastifyInstance): Promise<void> {
-  // GET /api/oauth/instagram/start — see oauth-x.ts for why this reads
-  // ?access_token instead of an Authorization header (same full-page-nav /
-  // cross-origin-cookie problem, same fix).
-  app.get<{ Querystring: { access_token?: string } }>("/api/oauth/instagram/start", async (request, reply) => {
-    const token = request.query.access_token;
-    const user = token ? await getUserFromAccessToken(token) : null;
-    if (!user) {
+  // GET /api/oauth/instagram/start — see oauth-x.ts / oauth-connect-ticket.ts
+  // for why this reads ?ticket instead of an Authorization header.
+  app.get<{ Querystring: { ticket?: string } }>("/api/oauth/instagram/start", async (request, reply) => {
+    const userId = await resolveConnectTicket(request.query.ticket);
+    if (!userId) {
       return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
     }
 
@@ -46,7 +40,7 @@ export async function oauthInstagramRoutes(app: FastifyInstance): Promise<void> 
     }
 
     const state = generateState();
-    setOAuthAttemptCookies(request, reply, "instagram", { state, userId: user.id });
+    setOAuthAttemptCookies(request, reply, "instagram", { state, userId });
 
     const authorizeUrl =
       `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +

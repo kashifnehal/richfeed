@@ -7,30 +7,35 @@ import {
 } from "../db/queries";
 import { publishToFacebook } from "../platforms/facebook";
 import { publishToInstagram } from "../platforms/instagram";
+import { publishToLinkedIn } from "../platforms/linkedin";
 import { publishToThreads } from "../platforms/threads";
+import {
+  PlatformPublishError,
+  type PublishAccount,
+  type PublishPost,
+  type PublishResult,
+  type PublishTarget,
+} from "../platforms/types";
 import { publishToX } from "../platforms/x";
-import { PlatformPublishError, type PublishAccount, type PublishResult } from "../platforms/types";
+import { publishToYouTube } from "../platforms/youtube";
 import { getRedisConnection } from "./connection";
 import { QUEUE_NAME, type PublishJobPayload } from "./scheduler";
 
-type PublishAdapter = (
-  account: PublishAccount,
-  target: { id: string; platformCaptionOverride: string | null },
-  post: { caption: string | null; mediaUrls: string[] | null; mediaType: import("@richfeed/shared").MediaType | null },
-) => Promise<PublishResult>;
+type PublishAdapter = (account: PublishAccount, target: PublishTarget, post: PublishPost) => Promise<PublishResult>;
 
 const ADAPTERS: Partial<Record<string, PublishAdapter>> = {
   twitter: publishToX,
   facebook: publishToFacebook,
   instagram: publishToInstagram,
   threads: publishToThreads,
+  linkedin_personal: publishToLinkedIn,
+  youtube: publishToYouTube,
 };
 
 /**
  * Processes a single publish job: pending -> publishing -> published (or
- * failed). Twitter targets go through the real adapter (platforms/x.ts);
- * every other platform still uses the simulated stub until its own adapter
- * is built.
+ * failed), dispatched to a real platform adapter via ADAPTERS. Any platform
+ * without an adapter yet still uses the simulated stub.
  */
 async function processPublishJob(job: Job<PublishJobPayload>): Promise<void> {
   const { postTargetId } = job.data;
@@ -56,8 +61,8 @@ async function processPublishJob(job: Job<PublishJobPayload>): Promise<void> {
           refreshToken: account.refresh_token,
           tokenExpiresAt: account.token_expires_at,
         },
-        { id: target.id, platformCaptionOverride: target.platform_caption_override },
-        { caption: post.caption, mediaUrls: post.mediaUrls, mediaType: post.mediaType },
+        { id: target.id, platformCaptionOverride: target.platform_caption_override, publishAt: target.publish_at },
+        { caption: post.caption, hashtags: post.hashtags, mediaUrls: post.mediaUrls, mediaType: post.mediaType },
       );
 
       await updatePostTargetStatus(postTargetId, "published", result.platformPostId, result.permalinkUrl);
