@@ -10,8 +10,7 @@
   "scripts": {
     "dev": "turbo run dev worker",
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test:e2e": "pnpm --filter web test:e2e"
+    "lint": "turbo run lint"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",

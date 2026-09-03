@@ -10,7 +10,6 @@
     "migrate": "tsx --env-file-if-exists=.env src/scripts/apply-migrations.ts",
     "seed": "tsx --env-file-if-exists=.env src/scripts/seed-demo-data.ts",
     "create-demo-user": "tsx --env-file-if-exists=.env src/scripts/create-demo-user.ts",
-    "e2e:purge-user": "tsx --env-file-if-exists=.env src/scripts/e2e-purge-user.ts",
     "build": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"

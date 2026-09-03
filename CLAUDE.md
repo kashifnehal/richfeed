@@ -19,9 +19,9 @@ yet. Optimize for forward progress over process:
 - **Scale verification to the change, and run each check once.** A narrow, additive change — one
   route, one query, one component, a `scripts/` file, docs — needs a targeted check: the affected
   package's `tsc` (`pnpm --filter <pkg> build`) plus one `curl` against the running API. Not the whole
-  `pnpm build` + `pnpm lint` + `pnpm test:e2e` sequence, and never that sequence twice. Reserve the
-  full sequence for changes to the RLS/auth boundary, the queue/worker pipeline, the design-system
-  tokens, or a migration. Batch fixes before re-linting — don't lint-fix-lint one finding at a time.
+  `pnpm build` + `pnpm lint` sequence, and never that sequence twice. Reserve the full sequence for
+  changes to the RLS/auth boundary, the queue/worker pipeline, the design-system tokens, or a
+  migration. Batch fixes before re-linting — don't lint-fix-lint one finding at a time.
 - **Don't gold-plate scaffolding-stage work.** Skip exhaustive edge-case handling, extra abstraction
   layers, or defensive code for scenarios that can't occur yet (e.g. no need to handle multi-workspace
   conflicts before workspaces exist). Flag a deliberately-cut corner in the report rather than silently
@@ -56,35 +56,9 @@ yet. Optimize for forward progress over process:
   root `turbo.json` as a third persistent `pnpm dev` task alongside web/api. Don't merge it into
   `server.ts`.
 
-## E2E smoke suite — `pnpm test:e2e`
-
-Run it **once**, at the end of a step that changed runtime behaviour in `apps/web` or `apps/api`
-(routes, queries, components, middleware, schema). **Skip it — and say so in the report — for a step
-that can't affect it**: docs (`docs/brain/`, any `*.md`), `apps/api/src/scripts/*`, config, comments,
-`CLAUDE.md`. A single green pass is the bar; don't run it twice "to be sure." It's a real Chromium run
-plus a full DB reseed — it is not a cheap check.
-
-`pnpm test:e2e` (root) → Playwright, `apps/web/e2e/`, drives a real Chromium against the live local
-stack and real Supabase Auth. Covers read paths (dashboard stats, attention list, 9 accounts, compose
-disabled-account rule, publish-attempt log, calendar month/week, queue server-side pagination + sort,
-settings tabs, responsive overflow at sm/md/lg) **and write paths** (create post → Queue, cancel /
-duplicate / reschedule a target, disconnect an account, notification-row nav, sign-up, forgot-password),
-with mutations verified server-side via the same REST API the app uses.
-
-- `e2e/global-setup.ts` **re-seeds the demo dataset from scratch before every run** (`pnpm --filter api
-  seed`) and clears the sign-up test's throwaway account, so the write-path tests can mutate freely.
-  Within one run, order matters (read specs 01–09 before write specs 10–14); across runs it's clean.
-- Config lives in git-ignored `apps/web/.env.test` (`E2E_USER_ID` / `E2E_USER_EMAIL` /
-  `E2E_USER_PASSWORD`, plus `E2E_SIGNUP_EMAIL` / `E2E_SIGNUP_PASSWORD`). See `.env.test.example`.
-  Rotate the password with `pnpm --filter api create-demo-user -- --user <id> --password '<new>'`
-  (idempotent — resets the existing user).
-- A `setup` project signs in once and saves the session to `e2e/.auth/user.json` (git-ignored); the
-  rest of the suite reuses it so GoTrue's `/token` endpoint isn't hammered. The auth specs opt out.
-- The webServer block auto-starts `pnpm dev` if nothing is on :3000.
-
 **Before any `pnpm build`, check for a running dev server as its own first step** (`lsof -ti:3000`).
-**Never run `pnpm build` while `pnpm dev` (or the E2E suite) is running** — `next build` and `next dev`
-share `apps/web/.next`, and a concurrent build corrupts the dev server's client bundle (sign-in stops
+**Never run `pnpm build` while `pnpm dev` is running** — `next build` and `next dev` share
+`apps/web/.next`, and a concurrent build corrupts the dev server's client bundle (sign-in stops
 hydrating; forms fall back to a native GET submit). Recovery (kill dev, `rm -rf apps/web/.next`,
 restart, re-verify) costs far more than the check.
 
@@ -110,9 +84,9 @@ Sessions here routinely run past 150k context, which is expensive even when cach
   are in `docs/brain/ARCHITECTURE.md` and `docs/brain/features/STATUS.md`. Read those instead of
   re-deriving them from the tree.
 - **Prefer cheap live checks.** `curl` the running API (port 4000) and read the code over driving a
-  browser. If a browser is genuinely needed, `pnpm test:e2e` (bounded output) beats any
-  browser-automation MCP, whose page snapshots are large and stay in context for the rest of the
-  session.
+  browser. There is no automated E2E suite in this repo — a manual click-through in the running app
+  is the verification path when a browser is genuinely needed; avoid browser-automation MCPs for
+  routine checks, since their page snapshots are large and stay in context for the rest of the session.
 - **One task per session.** When the user switches to an unrelated task, suggest `/clear` first; when
   a task runs long, suggest `/compact`. Don't carry a finished step's exploration into the next one.
 - **The claude.ai MCP connectors (Resend, Railway, Vercel, Figma, Render, and the Supabase one) are
