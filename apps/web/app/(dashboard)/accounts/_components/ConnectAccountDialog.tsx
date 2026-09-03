@@ -4,7 +4,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { PlatformBadge } from "@richfeed/ui";
 import { Plus, X } from "lucide-react";
 import type { ReactElement } from "react";
+import type { Platform } from "@richfeed/shared";
 import { useToast } from "../../../../components/shared/Toast";
+import { createClient } from "../../../../lib/supabase/client";
 import {
   ALL_PLATFORMS,
   COMING_SOON_PLATFORMS,
@@ -12,8 +14,34 @@ import {
   platformToBadge,
 } from "../../../../lib/platform";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
 export function ConnectAccountDialog(): ReactElement {
   const { showToast } = useToast();
+
+  async function handleConnectX() {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      showToast("Sign in again to connect an account.", "error");
+      return;
+    }
+
+    // A real full-page navigation, not a fetch — X's own consent screen has
+    // to actually render, which only happens if the browser leaves the SPA.
+    window.location.href = `${API_URL}/api/oauth/x/start?access_token=${encodeURIComponent(session.access_token)}`;
+  }
+
+  function handleSelectPlatform(platform: Platform) {
+    if (platform === "twitter") {
+      void handleConnectX();
+      return;
+    }
+    showToast("Not yet connected — coming in the next build.", "info");
+  }
 
   return (
     <Dialog.Root>
@@ -47,7 +75,7 @@ export function ConnectAccountDialog(): ReactElement {
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-1 text-sm text-secondary">
-            Choose a platform to connect. OAuth is coming in the next build.
+            Choose a platform to connect. Other platforms&apos; OAuth is coming in a future build.
           </Dialog.Description>
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -60,7 +88,7 @@ export function ConnectAccountDialog(): ReactElement {
                   key={platform}
                   type="button"
                   disabled={isComingSoon}
-                  onClick={() => showToast("Not yet connected — coming in the next build.", "info")}
+                  onClick={() => handleSelectPlatform(platform)}
                   className={`flex flex-col items-center gap-2 rounded-control border border-subtle-2 p-4 text-center transition-colors ${
                     isComingSoon
                       ? "cursor-not-allowed opacity-50"

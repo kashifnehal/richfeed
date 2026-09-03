@@ -26,7 +26,7 @@ export type PostTargetStatus =
   | "queued";
 
 /** Health of a connected social account. */
-export type AccountStatus = "connected" | "needs_reconnect" | "limited";
+export type AccountStatus = "connected" | "needs_reconnect" | "limited" | "disconnected";
 
 /** Media type of a scheduled post's attached media. */
 export type MediaType = "image" | "video" | "carousel";
@@ -39,6 +39,8 @@ export interface SocialAccountDto {
   id: string;
   platform: Platform;
   platformAccountId: string;
+  /** Human-readable handle (e.g. X's @handle) — distinct from platformAccountId. Null until a real OAuth connect populates it. */
+  platformUsername: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   status: AccountStatus;

@@ -11,12 +11,14 @@ const PILL_MAP: Record<AccountStatus, StatusPillStatus> = {
   connected: "published",
   needs_reconnect: "needs-reconnect",
   limited: "scheduled",
+  disconnected: "disconnected",
 };
 
 const LABEL_MAP: Record<AccountStatus, string> = {
   connected: "Connected",
   needs_reconnect: "Needs reconnect",
   limited: "Limited",
+  disconnected: "Disconnected",
 };
 
 export function accountStatusToPill(status: AccountStatus): StatusPillStatus {

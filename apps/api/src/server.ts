@@ -5,6 +5,7 @@ import { accountsRoutes } from "./routes/accounts";
 import { dashboardRoutes } from "./routes/dashboard";
 import { mediaRoutes } from "./routes/media";
 import { notificationsRoutes } from "./routes/notifications";
+import { oauthXRoutes } from "./routes/oauth-x";
 import { postsRoutes } from "./routes/posts";
 import { workspaceRoutes } from "./routes/workspace";
 
@@ -24,6 +25,7 @@ await app.register(dashboardRoutes);
 await app.register(mediaRoutes);
 await app.register(workspaceRoutes);
 await app.register(notificationsRoutes);
+await app.register(oauthXRoutes);
 
 const port = Number(process.env.PORT ?? 4000);
 

@@ -15,6 +15,7 @@ import { DuplicateDialog } from "../../../../components/post/DuplicateDialog";
 import { PublishAttemptLog } from "../../../../components/post/PublishAttemptLog";
 import { apiFetch, ApiError } from "../../../../lib/api";
 import { deriveMediaType, itemsFromUrls, type MediaItem } from "../../../../lib/media";
+import { buildPermalinkUrl } from "../../../../lib/permalink";
 import { PLATFORM_LABELS, platformToBadge } from "../../../../lib/platform";
 import { targetStatusToPill, targetStatusLabel } from "../../../../lib/status";
 import { RescheduleDialog } from "./_components/RescheduleDialog";
@@ -196,6 +197,10 @@ export default function PostDetailPage() {
               <div className="flex flex-col gap-3">
                 {post.targets.map((target) => {
                   const badge = target.account ? platformToBadge(target.account.platform) : null;
+                  const permalinkUrl =
+                    target.status === "published" && target.platformPostId && target.account
+                      ? buildPermalinkUrl(target.account.platform, target.platformPostId, target.account)
+                      : undefined;
                   return (
                     <div
                       key={target.id}
@@ -217,7 +222,19 @@ export default function PostDetailPage() {
                           label={targetStatusLabel(target.status)}
                         />
                         {target.status === "published" ? (
-                          <ExternalLink size={15} className="text-secondary" aria-hidden="true" />
+                          permalinkUrl ? (
+                            <a
+                              href={permalinkUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="Open the published post"
+                              className="text-secondary transition-colors hover:text-primary"
+                            >
+                              <ExternalLink size={15} />
+                            </a>
+                          ) : (
+                            <ExternalLink size={15} className="text-secondary" aria-hidden="true" />
+                          )
                         ) : null}
                       </div>
                       {target.publishAttempts && target.publishAttempts.length > 0 ? (

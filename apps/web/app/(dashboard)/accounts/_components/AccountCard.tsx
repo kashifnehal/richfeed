@@ -8,7 +8,7 @@ import type { SocialAccountDto } from "@richfeed/shared";
 import { ConfirmDialog } from "../../../../components/shared/ConfirmDialog";
 import { useToast } from "../../../../components/shared/Toast";
 import { accountStatusLabel, accountStatusToPill } from "../../../../lib/account-status";
-import { apiFetch } from "../../../../lib/api";
+import { ApiError, apiFetch } from "../../../../lib/api";
 import { PLATFORM_LABELS, platformToBadge } from "../../../../lib/platform";
 
 export interface AccountCardProps {
@@ -18,8 +18,9 @@ export interface AccountCardProps {
 
 export function AccountCard({ account, onChanged }: AccountCardProps): ReactElement {
   const { showToast } = useToast();
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"disconnect" | "remove" | null>(null);
   const badge = platformToBadge(account.platform);
+  const isDisconnected = account.status === "disconnected";
 
   async function handleDisconnect() {
     try {
@@ -31,6 +32,17 @@ export function AccountCard({ account, onChanged }: AccountCardProps): ReactElem
       onChanged();
     } catch {
       showToast("Couldn't disconnect this account. Try again.", "error");
+    }
+  }
+
+  async function handleRemove() {
+    try {
+      await apiFetch(`/api/accounts/${account.id}`, { method: "DELETE" });
+      showToast("Account removed.", "success");
+      onChanged();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Couldn't remove this account. Try again.";
+      showToast(message, "error");
     }
   }
 
@@ -77,24 +89,44 @@ export function AccountCard({ account, onChanged }: AccountCardProps): ReactElem
             >
               Reconnect
             </DropdownMenu.Item>
-            <DropdownMenu.Item
-              onSelect={() => setConfirmOpen(true)}
-              className="cursor-pointer rounded-control px-2.5 py-2 text-sm text-primary outline-none transition-colors hover:bg-sidebar-hover"
-            >
-              Disconnect
-            </DropdownMenu.Item>
+            {isDisconnected ? (
+              <DropdownMenu.Item
+                onSelect={() => setConfirmAction("remove")}
+                className="cursor-pointer rounded-control px-2.5 py-2 text-sm text-primary outline-none transition-colors hover:bg-sidebar-hover"
+              >
+                Remove permanently
+              </DropdownMenu.Item>
+            ) : (
+              <DropdownMenu.Item
+                onSelect={() => setConfirmAction("disconnect")}
+                className="cursor-pointer rounded-control px-2.5 py-2 text-sm text-primary outline-none transition-colors hover:bg-sidebar-hover"
+              >
+                Disconnect
+              </DropdownMenu.Item>
+            )}
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title="Disconnect this account?"
-        description={`The Social Queue will stop publishing to ${account.displayName ?? PLATFORM_LABELS[account.platform]}. You can reconnect it later.`}
-        confirmLabel="Disconnect"
-        onConfirm={() => void handleDisconnect()}
-      />
+      {isDisconnected ? (
+        <ConfirmDialog
+          open={confirmAction === "remove"}
+          onOpenChange={(open) => setConfirmAction(open ? "remove" : null)}
+          title="Remove this account permanently?"
+          description={`This deletes ${account.displayName ?? PLATFORM_LABELS[account.platform]} from The Social Queue for good. Blocked while any scheduled or published posts still reference it.`}
+          confirmLabel="Remove permanently"
+          onConfirm={() => void handleRemove()}
+        />
+      ) : (
+        <ConfirmDialog
+          open={confirmAction === "disconnect"}
+          onOpenChange={(open) => setConfirmAction(open ? "disconnect" : null)}
+          title="Disconnect this account?"
+          description={`The Social Queue will stop publishing to ${account.displayName ?? PLATFORM_LABELS[account.platform]}. Its post history stays intact and you can reconnect it later.`}
+          confirmLabel="Disconnect"
+          onConfirm={() => void handleDisconnect()}
+        />
+      )}
     </div>
   );
 }

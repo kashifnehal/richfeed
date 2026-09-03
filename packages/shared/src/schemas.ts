@@ -30,6 +30,7 @@ export const accountStatusSchema = z.enum([
   "connected",
   "needs_reconnect",
   "limited",
+  "disconnected",
 ]);
 
 export const mediaTypeSchema = z.enum(["image", "video", "carousel"]);

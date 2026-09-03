@@ -5,7 +5,8 @@ export type StatusPillStatus =
   | "published"
   | "failed"
   | "needs-reconnect"
-  | "queued";
+  | "queued"
+  | "disconnected";
 
 export interface StatusPillProps {
   status: StatusPillStatus;
@@ -19,6 +20,10 @@ const STATUS_CLASSES: Record<StatusPillStatus, string> = {
   failed: "bg-status-failed-bg text-status-failed-text",
   "needs-reconnect": "bg-status-needs-reconnect-bg text-status-needs-reconnect-text",
   queued: "bg-status-queued-bg text-status-queued-text",
+  // No dedicated "disconnected" status color in tokens.css — reuses the
+  // existing neutral subtle-2/secondary pair (same as a disabled/inactive
+  // tile elsewhere in the UI) rather than adding a new hex value.
+  disconnected: "bg-subtle-2 text-secondary",
 };
 
 function titleCase(status: string): string {

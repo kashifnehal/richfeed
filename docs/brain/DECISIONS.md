@@ -211,6 +211,18 @@ prompt otherwise found the folder already present and current through commit
 `dc59e91` — no structural rebuild was needed, only the PRODUCT/BUSINESS swap and
 this tier correction.
 
+## 2026-09-03 — "Disconnect account" is a soft status change, reversing the 2026-08-29 hard delete
+
+`PATCH /api/accounts/:id { disconnect }` now sets `status='disconnected'`
+instead of deleting the row and cascading through `post_targets` /
+`publish_attempts`. A new `DELETE /api/accounts/:id` does the actual
+permanent removal, blocked (409) while any `post_targets` still reference the
+account. Migration `0004_account_disconnected_status.sql` adds
+`'disconnected'` to the status check constraint. Reason: real platform
+connections (X/Twitter, this same step) make losing publish history on every
+disconnect an actual cost, not just a theoretical one — flagged as the real
+long-term answer back in the original hard-delete entry.
+
 ## Observed drift from the scaffold prompt's assumptions (noted 2026-08-29)
 
 The prompt that created this folder assumed `apps/api/src/platforms/` and a

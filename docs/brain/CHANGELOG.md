@@ -237,6 +237,37 @@ worker publish step is a stub, and there are no platform OAuth env vars.
 
 ---
 
+## 2026-09-03 — Real X (Twitter) OAuth + publish; account disconnect is soft-delete (commit PENDING)
+
+What shipped: the first real platform integration in the codebase.
+`apps/api/src/platforms/x.ts` (adapter) + `apps/api/src/routes/oauth-x.ts`
+(Authorization Code + PKCE OAuth) + worker dispatch in `queue/worker.ts` +
+a real "X (Twitter)" connect button on the Accounts page — a user can connect
+a real X account and schedule a real post (text-only or single-image; video/
+carousel fail fast with a clear error) that actually publishes. Token refresh,
+`needs_reconnect` on an auth failure, and a real permalink
+(`https://x.com/{username}/status/{id}`) on Post detail are all live. See
+`platforms/x.md` for the full shape, including how `/api/oauth/x/start`
+identifies the user despite being a plain browser navigation with no
+Authorization header (`lib/oauth-state.ts` + a query-param access token,
+not a cookie — the web app's Supabase session cookie lives on a different
+origin than this API).
+
+Also shipped as a prerequisite: `PATCH /api/accounts/:id` (disconnect) is now
+a soft `status='disconnected'` change instead of a hard delete — a new
+`DELETE /api/accounts/:id` does permanent removal, blocked while any
+`post_targets` still reference the account. Disconnected accounts stay
+visible on the Accounts page (new pill) but are excluded from Compose's
+account selector and the Duplicate dialog. Migration
+`0004_account_disconnected_status.sql`. See `DECISIONS.md` (2026-09-03).
+
+Deviations/known gaps: `NEXT_PUBLIC_APP_URL` in this environment's `.env` is
+already set to a future production domain, so the OAuth redirect target is
+hardcoded to `http://localhost:3000` (matching the existing CORS hardcoding)
+rather than read from that var — see `platforms/x.md`. "Reconnect" on an
+existing account (any status) is still a placeholder toast — only the
+initial Connect flow is real. No avatar is fetched/stored from X yet.
+
 ## Template for future entries
 
 ```

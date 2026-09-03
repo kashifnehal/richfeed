@@ -2,16 +2,26 @@
 
 import { EmptyState } from "@richfeed/ui";
 import { Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { SocialAccountDto } from "@richfeed/shared";
+import { useToast } from "../../../components/shared/Toast";
 import { apiFetch } from "../../../lib/api";
 import { PLATFORM_LABELS } from "../../../lib/platform";
 import { AccountCard } from "./_components/AccountCard";
 import { ConnectAccountDialog } from "./_components/ConnectAccountDialog";
 
+const CONNECT_ERROR_MESSAGES: Record<string, string> = {
+  x_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  x_connect_failed: "Couldn't connect that X account. Please try again.",
+};
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<SocialAccountDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
 
   const load = useCallback(() => {
     apiFetch<{ accounts: SocialAccountDto[] }>("/api/accounts")
@@ -22,6 +32,20 @@ export default function AccountsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const connected = searchParams.get("connected");
+    const oauthError = searchParams.get("error");
+    if (!connected && !oauthError) return;
+
+    if (connected === "x") {
+      showToast("X account connected.", "success");
+    } else if (oauthError) {
+      showToast(CONNECT_ERROR_MESSAGES[oauthError] ?? "Couldn't connect that account. Please try again.", "error");
+    }
+
+    router.replace("/accounts");
+  }, [searchParams, router, showToast]);
 
   const groups = new Map<string, SocialAccountDto[]>();
   for (const account of accounts ?? []) {

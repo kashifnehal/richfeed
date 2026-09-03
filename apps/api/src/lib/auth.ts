@@ -9,6 +9,24 @@ export class UnauthorizedError extends Error {
 }
 
 /**
+ * Verifies a raw Supabase access token and returns the user it belongs to,
+ * or null if it's missing/invalid/expired. Shared by requireUser (reads the
+ * Authorization header) and any route reached via a plain browser navigation
+ * instead of a fetch — e.g. an OAuth `/start` route — which has no header to
+ * read and must be handed the token another way.
+ */
+export async function getUserFromAccessToken(
+  token: string,
+): Promise<{ id: string; email: string | null } | null> {
+  if (!token) return null;
+
+  const { data, error } = await getSupabaseClient().auth.getUser(token);
+  if (error || !data.user) return null;
+
+  return { id: data.user.id, email: data.user.email ?? null };
+}
+
+/**
  * Verifies the Supabase JWT on the Authorization header (`Bearer <token>`)
  * and returns the authenticated user. Every route that touches the
  * database MUST call this first — RLS is the real enforcement boundary,
@@ -31,13 +49,12 @@ export async function requireUser(
     throw new UnauthorizedError("Missing bearer token");
   }
 
-  const { data, error } = await getSupabaseClient().auth.getUser(token);
-
-  if (error || !data.user) {
+  const user = await getUserFromAccessToken(token);
+  if (!user) {
     throw new UnauthorizedError("Invalid or expired session");
   }
 
-  return { id: data.user.id, email: data.user.email ?? null };
+  return user;
 }
 
 /** Sends a consistent 401 response for UnauthorizedError, rethrows anything else. */

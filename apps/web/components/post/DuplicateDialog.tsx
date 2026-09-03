@@ -29,6 +29,10 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
   const [publishAt, setPublishAt] = useState(defaultPublishAt());
   const [submitting, setSubmitting] = useState(false);
 
+  // Disconnected accounts can't be posted to at all — excluded entirely,
+  // unlike needs_reconnect which stays selectable-but-flagged below.
+  const selectableAccounts = accounts.filter((a) => a.status !== "disconnected");
+
   async function handleConfirm() {
     if (!accountId) return;
     setSubmitting(true);
@@ -74,7 +78,7 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
             </Dialog.Close>
           </div>
 
-          {accounts.length === 0 ? (
+          {selectableAccounts.length === 0 ? (
             <div className="mt-4">
               <EmptyState
                 title="No connected accounts"
@@ -92,7 +96,7 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
           ) : (
             <>
               <div className="mt-4 flex flex-col gap-1.5">
-                {accounts.map((account) => {
+                {selectableAccounts.map((account) => {
                   const disabled = account.status === "needs_reconnect";
                   return (
                     <label

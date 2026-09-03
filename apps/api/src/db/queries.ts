@@ -162,6 +162,46 @@ export async function updatePostTargetStatus(
   return data as PostTargetRow;
 }
 
+export interface PublishJobContext {
+  target: PostTargetRow;
+  post: { caption: string | null; mediaUrls: string[] | null; mediaType: MediaType | null };
+  account: SocialAccountFullRawRow;
+}
+
+interface PostTargetForPublishRawRow extends PostTargetRow {
+  scheduled_posts: ScheduledPostRow | null;
+  social_accounts: SocialAccountFullRawRow | null;
+}
+
+/** Everything a worker job needs to dispatch a publish: the target, its parent post's content, and the target account's platform + tokens. */
+export async function getPublishJobContext(postTargetId: string): Promise<PublishJobContext | null> {
+  const { data, error } = await getSupabaseClient()
+    .from("post_targets")
+    .select("*, scheduled_posts(*), social_accounts(*)")
+    .eq("id", postTargetId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DbError(`Failed to load publish context for post target ${postTargetId}: ${error.message}`, error);
+  }
+  if (!data) return null;
+
+  const row = data as unknown as PostTargetForPublishRawRow;
+  if (!row.scheduled_posts || !row.social_accounts) {
+    throw new DbError(`Post target ${postTargetId} is missing its parent post or account`, null);
+  }
+
+  return {
+    target: row,
+    post: {
+      caption: row.scheduled_posts.caption,
+      mediaUrls: row.scheduled_posts.media_urls,
+      mediaType: row.scheduled_posts.media_type as MediaType | null,
+    },
+    account: row.social_accounts,
+  };
+}
+
 export async function recordPublishAttempt(
   postTargetId: string,
   result: RecordPublishAttemptInput,
@@ -200,10 +240,19 @@ interface SocialAccountRawRow {
   id: string;
   platform: string;
   platform_account_id: string;
+  platform_username: string | null;
   display_name: string | null;
   avatar_url: string | null;
   status: string;
   connected_at: string;
+}
+
+interface SocialAccountFullRawRow extends SocialAccountRawRow {
+  user_id: string;
+  access_token: string;
+  refresh_token: string | null;
+  token_expires_at: string | null;
+  scopes: string[] | null;
 }
 
 interface PublishAttemptRawRow {
@@ -243,6 +292,7 @@ function mapAccount(row: SocialAccountRawRow): SocialAccountDto {
     id: row.id,
     platform: row.platform as Platform,
     platformAccountId: row.platform_account_id,
+    platformUsername: row.platform_username,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
     status: row.status as AccountStatus,
@@ -302,11 +352,28 @@ export async function listSocialAccounts(userId: string): Promise<SocialAccountD
   return ((data as SocialAccountRawRow[]) ?? []).map(mapAccount);
 }
 
-export async function deleteSocialAccount(userId: string, id: string): Promise<boolean> {
+/** Soft-disconnect: flips status to 'disconnected'. post_targets/publish_attempts are left untouched — history stays intact. */
+export async function disconnectSocialAccount(userId: string, id: string): Promise<boolean> {
+  const { data, error } = await getSupabaseClient()
+    .from("social_accounts")
+    .update({ status: "disconnected" })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("id");
+
+  if (error) {
+    throw new DbError(`Failed to disconnect social account ${id}: ${error.message}`, error);
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
+export type DeleteAccountResult = { ok: true } | { ok: false; reason: "not_found" | "has_targets" };
+
+/** Permanent removal — only allowed once zero post_targets reference the account (its non-cascading FK would otherwise 500). */
+export async function deleteSocialAccountPermanently(userId: string, id: string): Promise<DeleteAccountResult> {
   const supabase = getSupabaseClient();
 
-  // Ownership check first — the delete below is filtered by user_id too, but
-  // we need to know up front whether the row exists to return 404 vs 200.
   const { data: account, error: lookupErr } = await supabase
     .from("social_accounts")
     .select("id")
@@ -317,61 +384,103 @@ export async function deleteSocialAccount(userId: string, id: string): Promise<b
   if (lookupErr) {
     throw new DbError(`Failed to look up social account ${id}: ${lookupErr.message}`, lookupErr);
   }
-  if (!account) return false;
+  if (!account) return { ok: false, reason: "not_found" };
 
-  // post_targets.social_account_id has a plain (non-cascading) FK, so the
-  // account row can't be deleted while any target still references it.
-  // Disconnecting drops this account's targets (same hard-delete semantics
-  // as cancelling a target) in FK-safe order: publish_attempts -> targets ->
-  // the account. Parent scheduled_posts are left intact — a post that ends
-  // up with zero targets simply reverts to a draft-like state, which is an
-  // already-valid shape in this schema.
-  const { data: targets, error: targetsErr } = await supabase
+  const { count, error: targetsErr } = await supabase
     .from("post_targets")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .eq("social_account_id", id);
 
   if (targetsErr) {
-    throw new DbError(`Failed to list targets for account ${id}: ${targetsErr.message}`, targetsErr);
+    throw new DbError(`Failed to check targets for account ${id}: ${targetsErr.message}`, targetsErr);
+  }
+  if ((count ?? 0) > 0) {
+    return { ok: false, reason: "has_targets" };
   }
 
-  const targetIds = (targets ?? []).map((t) => t.id as string);
-  if (targetIds.length > 0) {
-    const { error: attemptsErr } = await supabase
-      .from("publish_attempts")
-      .delete()
-      .in("post_target_id", targetIds);
-    if (attemptsErr) {
-      throw new DbError(
-        `Failed to delete publish attempts for account ${id}: ${attemptsErr.message}`,
-        attemptsErr,
-      );
-    }
-
-    const { error: delTargetsErr } = await supabase
-      .from("post_targets")
-      .delete()
-      .in("id", targetIds);
-    if (delTargetsErr) {
-      throw new DbError(
-        `Failed to delete targets for account ${id}: ${delTargetsErr.message}`,
-        delTargetsErr,
-      );
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("social_accounts")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select("id");
+  const { error } = await supabase.from("social_accounts").delete().eq("id", id).eq("user_id", userId);
 
   if (error) {
-    throw new DbError(`Failed to disconnect social account ${id}: ${error.message}`, error);
+    throw new DbError(`Failed to remove social account ${id}: ${error.message}`, error);
   }
 
-  return (data?.length ?? 0) > 0;
+  return { ok: true };
+}
+
+export interface UpsertSocialAccountInput {
+  userId: string;
+  platform: Platform;
+  platformAccountId: string;
+  platformUsername: string;
+  displayName: string;
+  accessTokenEncrypted: string;
+  refreshTokenEncrypted: string;
+  tokenExpiresAt: string;
+  scopes: string[];
+}
+
+/** Insert-or-update-in-place on (user_id, platform, platform_account_id) — the reconnect path just updates the existing row. */
+export async function upsertSocialAccount(input: UpsertSocialAccountInput): Promise<SocialAccountDto> {
+  const { data, error } = await getSupabaseClient()
+    .from("social_accounts")
+    .upsert(
+      {
+        user_id: input.userId,
+        platform: input.platform,
+        platform_account_id: input.platformAccountId,
+        platform_username: input.platformUsername,
+        display_name: input.displayName,
+        access_token: input.accessTokenEncrypted,
+        refresh_token: input.refreshTokenEncrypted,
+        token_expires_at: input.tokenExpiresAt,
+        scopes: input.scopes,
+        status: "connected",
+        connected_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,platform,platform_account_id" },
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new DbError(`Failed to upsert social account for user ${input.userId}: ${error.message}`, error);
+  }
+
+  return mapAccount(data as SocialAccountRawRow);
+}
+
+export interface UpdateSocialAccountTokensInput {
+  accessTokenEncrypted: string;
+  refreshTokenEncrypted: string;
+  tokenExpiresAt: string;
+}
+
+/** Persists a rotated access/refresh token pair after a platform adapter refreshes them mid-publish. */
+export async function updateSocialAccountTokens(id: string, patch: UpdateSocialAccountTokensInput): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("social_accounts")
+    .update({
+      access_token: patch.accessTokenEncrypted,
+      refresh_token: patch.refreshTokenEncrypted,
+      token_expires_at: patch.tokenExpiresAt,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new DbError(`Failed to update tokens for social account ${id}: ${error.message}`, error);
+  }
+}
+
+/** Flips an account to needs_reconnect after a platform adapter reports an auth failure (401/403, or an unrefreshable token). */
+export async function markSocialAccountNeedsReconnect(id: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from("social_accounts")
+    .update({ status: "needs_reconnect" })
+    .eq("id", id);
+
+  if (error) {
+    throw new DbError(`Failed to flag social account ${id} as needs_reconnect: ${error.message}`, error);
+  }
 }
 
 // ----- Posts --------------------------------------------------------------

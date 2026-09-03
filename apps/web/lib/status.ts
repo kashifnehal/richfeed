@@ -2,11 +2,14 @@ import type { PostTargetStatus } from "@richfeed/shared";
 import type { StatusPillStatus } from "@richfeed/ui";
 
 /**
- * PostTargetStatus (DB / 6 values) -> StatusPillStatus (design system / 5
- * values). "publishing" has no dedicated pill color, so it's shown as
- * "queued" — visually "in flight", which is the closest accurate meaning.
+ * PostTargetStatus (DB / 6 values) -> StatusPillStatus, minus "disconnected"
+ * (an account-only status a post target can never have). "publishing" has no
+ * dedicated pill color, so it's shown as "queued" — visually "in flight",
+ * which is the closest accurate meaning.
  */
-const PILL_MAP: Record<PostTargetStatus, StatusPillStatus> = {
+type TargetPillStatus = Exclude<StatusPillStatus, "disconnected">;
+
+const PILL_MAP: Record<PostTargetStatus, TargetPillStatus> = {
   pending: "scheduled",
   queued: "queued",
   publishing: "queued",
@@ -15,7 +18,7 @@ const PILL_MAP: Record<PostTargetStatus, StatusPillStatus> = {
   needs_reconnect: "needs-reconnect",
 };
 
-export function targetStatusToPill(status: PostTargetStatus): StatusPillStatus {
+export function targetStatusToPill(status: PostTargetStatus): TargetPillStatus {
   return PILL_MAP[status];
 }
 

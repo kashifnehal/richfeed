@@ -18,7 +18,11 @@ export function AccountMultiSelect({
   selectedIds,
   onToggle,
 }: AccountMultiSelectProps): ReactElement {
-  if (accounts.length === 0) {
+  // Disconnected accounts can't be posted to at all — hidden entirely, unlike
+  // needs_reconnect which stays visible-but-disabled below.
+  const selectableAccounts = accounts.filter((a) => a.status !== "disconnected");
+
+  if (selectableAccounts.length === 0) {
     return (
       <EmptyState
         icon={<Users size={20} />}
@@ -37,7 +41,7 @@ export function AccountMultiSelect({
   }
 
   const groups = new Map<string, SocialAccountDto[]>();
-  for (const account of accounts) {
+  for (const account of selectableAccounts) {
     const label = PLATFORM_LABELS[account.platform];
     groups.set(label, [...(groups.get(label) ?? []), account]);
   }
