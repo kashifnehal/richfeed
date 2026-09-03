@@ -268,7 +268,7 @@ rather than read from that var — see `platforms/x.md`. "Reconnect" on an
 existing account (any status) is still a placeholder toast — only the
 initial Connect flow is real. No avatar is fetched/stored from X yet.
 
-## 2026-09-03 — Real Instagram + Facebook Pages + Threads OAuth/publish; Playwright E2E suite removed (commit PENDING)
+## 2026-09-03 — Real Instagram + Facebook Pages + Threads OAuth/publish; Playwright E2E suite removed (commit c78fc47)
 
 What shipped: three more real platform integrations, reusing X's
 conventions (`platforms/x.ts`) — `routes/oauth-instagram.ts`,
