@@ -311,7 +311,7 @@ click-throughs, and no real scheduled post to any of the three new
 platforms, could be driven manually in this environment (no live browser) —
 see the step's report for exactly what to click through.
 
-## 2026-09-03 — OAuth connect-ticket fixup; real LinkedIn + YouTube OAuth/publish — every Tier-1 platform now live (commit PENDING)
+## 2026-09-03 — OAuth connect-ticket fixup; real LinkedIn + YouTube OAuth/publish — every Tier-1 platform now live (commit a256039)
 
 What shipped, Task 0 (fixup): all six OAuth `/start` routes (X, Facebook,
 Instagram, Threads, and the two new ones below) now take a one-time connect
