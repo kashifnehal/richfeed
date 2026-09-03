@@ -16,10 +16,18 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
+/** Platform -> its /api/oauth/<slug>/start route. Every other enabled platform still shows the placeholder toast. */
+const OAUTH_SLUG: Partial<Record<Platform, string>> = {
+  twitter: "x",
+  instagram: "instagram",
+  facebook: "facebook",
+  threads: "threads",
+};
+
 export function ConnectAccountDialog(): ReactElement {
   const { showToast } = useToast();
 
-  async function handleConnectX() {
+  async function handleConnectOAuth(slug: string) {
     const supabase = createClient();
     const {
       data: { session },
@@ -30,14 +38,16 @@ export function ConnectAccountDialog(): ReactElement {
       return;
     }
 
-    // A real full-page navigation, not a fetch — X's own consent screen has
-    // to actually render, which only happens if the browser leaves the SPA.
-    window.location.href = `${API_URL}/api/oauth/x/start?access_token=${encodeURIComponent(session.access_token)}`;
+    // A real full-page navigation, not a fetch — the platform's own consent
+    // screen has to actually render, which only happens if the browser
+    // leaves the SPA.
+    window.location.href = `${API_URL}/api/oauth/${slug}/start?access_token=${encodeURIComponent(session.access_token)}`;
   }
 
   function handleSelectPlatform(platform: Platform) {
-    if (platform === "twitter") {
-      void handleConnectX();
+    const slug = OAUTH_SLUG[platform];
+    if (slug) {
+      void handleConnectOAuth(slug);
       return;
     }
     showToast("Not yet connected — coming in the next build.", "info");

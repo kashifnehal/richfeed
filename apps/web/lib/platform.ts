@@ -40,12 +40,13 @@ export const ENABLED_PLATFORMS: Platform[] = [
   "instagram",
   "facebook",
   "twitter",
+  "threads",
   "linkedin_personal",
   "linkedin_org",
   "youtube",
   "tiktok",
 ];
 
-export const COMING_SOON_PLATFORMS: Platform[] = ["pinterest", "threads", "reddit"];
+export const COMING_SOON_PLATFORMS: Platform[] = ["pinterest", "reddit"];
 
 export const ALL_PLATFORMS: Platform[] = [...ENABLED_PLATFORMS, ...COMING_SOON_PLATFORMS];

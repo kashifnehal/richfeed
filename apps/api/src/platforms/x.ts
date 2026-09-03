@@ -152,5 +152,8 @@ export async function publishToX(
   }
 
   const body = (await res.json()) as { data: { id: string } };
-  return { platformPostId: body.data.id };
+  return {
+    platformPostId: body.data.id,
+    permalinkUrl: buildXPermalink(account.platformUsername, body.data.id),
+  };
 }

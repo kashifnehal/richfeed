@@ -64,6 +64,8 @@ export interface PostTargetDto {
   platformCaptionOverride: string | null;
   status: PostTargetStatus;
   platformPostId: string | null;
+  /** Real permalink URL, fetched from the platform at publish time (null until published, or if the platform never returned one). */
+  permalinkUrl: string | null;
   account: SocialAccountDto | null;
   publishAttempts?: PublishAttemptDto[];
 }

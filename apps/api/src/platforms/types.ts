@@ -31,6 +31,8 @@ export interface PublishPost {
 
 export interface PublishResult {
   platformPostId: string;
+  /** Real permalink URL when the adapter can get one at publish time — undefined leaves it unset (never guessed client-side; see migration 0005). */
+  permalinkUrl?: string;
 }
 
 /**

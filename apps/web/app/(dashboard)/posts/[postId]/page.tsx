@@ -197,10 +197,7 @@ export default function PostDetailPage() {
               <div className="flex flex-col gap-3">
                 {post.targets.map((target) => {
                   const badge = target.account ? platformToBadge(target.account.platform) : null;
-                  const permalinkUrl =
-                    target.status === "published" && target.platformPostId && target.account
-                      ? buildPermalinkUrl(target.account.platform, target.platformPostId, target.account)
-                      : undefined;
+                  const permalinkUrl = buildPermalinkUrl(target);
                   return (
                     <div
                       key={target.id}

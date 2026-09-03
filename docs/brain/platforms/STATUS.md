@@ -3,8 +3,9 @@
 Wiring status for every target platform. **Update this whenever a platform's
 status or blocker changes**, as part of that build step's commit.
 
-_Last updated: 2026-09-03 (X (Twitter) is now real OAuth+publish — see
-`platforms/x.md`)._
+_Last updated: 2026-09-03 (Instagram, Facebook Pages, and Threads are now
+real OAuth+publish — see `platforms/instagram.md`, `platforms/facebook.md`,
+`platforms/threads.md`)._
 
 ## Status legend
 
@@ -16,21 +17,22 @@ _Last updated: 2026-09-03 (X (Twitter) is now real OAuth+publish — see
 
 ## Current state
 
-Determined by inspecting `apps/api/src/platforms/` (twitter is real; every
-other file still doesn't exist), `apps/api/.env.example` (X OAuth vars now
-present), and the worker (twitter dispatches to the real adapter; every other
-platform is still the stub). The demo seed creates fixture accounts for
-several platforms, but outside of X (Twitter) that's still just fixture
-data — no other real integration exists.
+Determined by inspecting `apps/api/src/platforms/` (twitter, instagram,
+facebook, threads are all real; every other file still doesn't exist),
+`apps/api/.env.example` (X + Meta-family OAuth vars now present), and the
+worker (those four dispatch to real adapters via a platform->adapter map;
+every other platform is still the stub). The demo seed creates fixture
+accounts for several platforms, but outside of these four that's still just
+fixture data — no other real integration exists.
 
 | Platform | Tier | Status | Blocker | Last updated |
 | --- | --- | --- | --- | --- |
 | linkedin_personal | 1 | not started | none — free & instant, no review gate | 2026-08-29 |
 | twitter (X) | 1 | **real OAuth+publish live** | none — connect + publish (text-only / single-image) both work end to end | 2026-09-03 |
 | youtube | 1 | not started | Google OAuth verification / quota; the basic flow is free and fast | 2026-08-29 |
-| instagram | 1 (own-account) / 2 (multi-tenant) | not started | Meta Business Verification + Advanced Access App Review — verification 1-2+ wks, review 4-8+ wks | 2026-08-29 |
-| facebook | 1 (own-account) / 2 (multi-tenant) | not started | same Meta Business Verification + Advanced Access review as instagram | 2026-08-29 |
-| threads | 1 (dev-mode) / 2 (production) | not started | Meta Threads App Review for production posting — up to ~20 days per Meta's 2026 guidance | 2026-08-29 |
+| instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers | 2026-09-03 |
+| facebook | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | same Meta Development Mode constraint as instagram | 2026-09-03 |
+| threads | 1 (dev-mode) / 2 (production) | **real OAuth+publish live (dev mode)** | Meta Threads App Review needed for production (non-tester) posting | 2026-09-03 |
 | tiktok | 2 | not started | TikTok Content Posting API audit — 2-4+ wks incl. resubmission | 2026-08-29 |
 | pinterest | 2 | not started | Pinterest Standard Access — 3-4+ wks, no official SLA | 2026-08-29 |
 | linkedin_org (Company Pages) | 3 | not started | LinkedIn Company Page Partner Program — deliberately deferred until Tier-1 is live with real usage to demo | 2026-08-29 |

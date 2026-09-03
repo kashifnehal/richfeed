@@ -24,11 +24,12 @@ function cookieString(name: string, value: string, secure: boolean, maxAgeSecond
 
 export interface OAuthAttemptCookies {
   state: string;
-  verifier: string;
+  /** Only X uses PKCE so far — omit for a plain state+client-secret flow (Facebook/Instagram/Threads). */
+  verifier?: string;
   userId: string;
 }
 
-/** Sets the state/verifier/userId cookies for a new OAuth attempt on `platform`. */
+/** Sets the state/[verifier]/userId cookies for a new OAuth attempt on `platform`. */
 export function setOAuthAttemptCookies(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -36,11 +37,14 @@ export function setOAuthAttemptCookies(
   values: OAuthAttemptCookies,
 ): void {
   const secure = !isLocalhostRequest(request);
-  reply.header("set-cookie", [
+  const cookies = [
     cookieString(`${platform}_oauth_state`, values.state, secure, COOKIE_MAX_AGE_SECONDS),
-    cookieString(`${platform}_oauth_verifier`, values.verifier, secure, COOKIE_MAX_AGE_SECONDS),
     cookieString(`${platform}_oauth_user`, values.userId, secure, COOKIE_MAX_AGE_SECONDS),
-  ]);
+  ];
+  if (values.verifier !== undefined) {
+    cookies.push(cookieString(`${platform}_oauth_verifier`, values.verifier, secure, COOKIE_MAX_AGE_SECONDS));
+  }
+  reply.header("set-cookie", cookies);
 }
 
 /** Reads back whatever OAuth attempt cookies are present for `platform`. Missing pieces come back undefined. */

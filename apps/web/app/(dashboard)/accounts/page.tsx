@@ -11,9 +11,24 @@ import { PLATFORM_LABELS } from "../../../lib/platform";
 import { AccountCard } from "./_components/AccountCard";
 import { ConnectAccountDialog } from "./_components/ConnectAccountDialog";
 
+const CONNECT_SUCCESS_MESSAGES: Record<string, string> = {
+  x: "X account connected.",
+  instagram: "Instagram account connected.",
+  threads: "Threads account connected.",
+};
+
 const CONNECT_ERROR_MESSAGES: Record<string, string> = {
   x_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
   x_connect_failed: "Couldn't connect that X account. Please try again.",
+  instagram_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  instagram_connect_failed: "Couldn't connect that Instagram account. Please try again.",
+  instagram_personal_account:
+    "That's a Personal Instagram account — switch it to a Business or Creator account first, then reconnect.",
+  facebook_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  facebook_connect_failed: "Couldn't connect Facebook. Please try again.",
+  facebook_no_pages: "That Facebook account doesn't manage any Pages to connect.",
+  threads_state_mismatch: "That connection attempt expired or was tampered with — please try connecting again.",
+  threads_connect_failed: "Couldn't connect that Threads account. Please try again.",
 };
 
 export default function AccountsPage() {
@@ -38,8 +53,11 @@ export default function AccountsPage() {
     const oauthError = searchParams.get("error");
     if (!connected && !oauthError) return;
 
-    if (connected === "x") {
-      showToast("X account connected.", "success");
+    if (connected === "facebook") {
+      const count = Number(searchParams.get("count") ?? "0");
+      showToast(count === 1 ? "1 Facebook Page connected." : `${count} Facebook Pages connected.`, "success");
+    } else if (connected && CONNECT_SUCCESS_MESSAGES[connected]) {
+      showToast(CONNECT_SUCCESS_MESSAGES[connected], "success");
     } else if (oauthError) {
       showToast(CONNECT_ERROR_MESSAGES[oauthError] ?? "Couldn't connect that account. Please try again.", "error");
     }

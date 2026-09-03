@@ -46,6 +46,7 @@ export interface PostTargetRow {
   platform_caption_override: string | null;
   status: PostTargetStatus;
   platform_post_id: string | null;
+  permalink_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -139,10 +140,14 @@ export async function updatePostTargetStatus(
   id: string,
   status: PostTargetStatus,
   platformPostId?: string,
+  permalinkUrl?: string,
 ): Promise<PostTargetRow> {
   const update: Record<string, unknown> = { status };
   if (platformPostId !== undefined) {
     update.platform_post_id = platformPostId;
+  }
+  if (permalinkUrl !== undefined) {
+    update.permalink_url = permalinkUrl;
   }
 
   const { data, error } = await getSupabaseClient()
@@ -272,6 +277,7 @@ interface PostTargetRawRow {
   platform_caption_override: string | null;
   status: string;
   platform_post_id: string | null;
+  permalink_url: string | null;
   social_accounts: SocialAccountRawRow | null;
   publish_attempts?: PublishAttemptRawRow[] | null;
 }
@@ -309,6 +315,7 @@ function mapTarget(row: PostTargetRawRow): PostTargetDto {
     platformCaptionOverride: row.platform_caption_override,
     status: row.status as PostTargetStatus,
     platformPostId: row.platform_post_id,
+    permalinkUrl: row.permalink_url,
     account: row.social_accounts ? mapAccount(row.social_accounts) : null,
     publishAttempts: row.publish_attempts?.map((a) => ({
       id: a.id,
@@ -411,11 +418,14 @@ export interface UpsertSocialAccountInput {
   userId: string;
   platform: Platform;
   platformAccountId: string;
-  platformUsername: string;
+  /** Not every platform's identity call returns a human handle (e.g. a Facebook Page just has a name). */
+  platformUsername?: string | null;
   displayName: string;
   accessTokenEncrypted: string;
-  refreshTokenEncrypted: string;
-  tokenExpiresAt: string;
+  /** Null for platforms with no separate refresh token (Instagram/Facebook/Threads all re-exchange the same long-lived token instead — see each platforms/*.md). */
+  refreshTokenEncrypted?: string | null;
+  /** Null for a token that doesn't expire on a known clock (e.g. a Facebook Page token). */
+  tokenExpiresAt?: string | null;
   scopes: string[];
 }
 
@@ -428,11 +438,11 @@ export async function upsertSocialAccount(input: UpsertSocialAccountInput): Prom
         user_id: input.userId,
         platform: input.platform,
         platform_account_id: input.platformAccountId,
-        platform_username: input.platformUsername,
+        platform_username: input.platformUsername ?? null,
         display_name: input.displayName,
         access_token: input.accessTokenEncrypted,
-        refresh_token: input.refreshTokenEncrypted,
-        token_expires_at: input.tokenExpiresAt,
+        refresh_token: input.refreshTokenEncrypted ?? null,
+        token_expires_at: input.tokenExpiresAt ?? null,
         scopes: input.scopes,
         status: "connected",
         connected_at: new Date().toISOString(),

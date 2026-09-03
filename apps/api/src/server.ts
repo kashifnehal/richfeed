@@ -5,6 +5,9 @@ import { accountsRoutes } from "./routes/accounts";
 import { dashboardRoutes } from "./routes/dashboard";
 import { mediaRoutes } from "./routes/media";
 import { notificationsRoutes } from "./routes/notifications";
+import { oauthFacebookRoutes } from "./routes/oauth-facebook";
+import { oauthInstagramRoutes } from "./routes/oauth-instagram";
+import { oauthThreadsRoutes } from "./routes/oauth-threads";
 import { oauthXRoutes } from "./routes/oauth-x";
 import { postsRoutes } from "./routes/posts";
 import { workspaceRoutes } from "./routes/workspace";
@@ -26,6 +29,9 @@ await app.register(mediaRoutes);
 await app.register(workspaceRoutes);
 await app.register(notificationsRoutes);
 await app.register(oauthXRoutes);
+await app.register(oauthFacebookRoutes);
+await app.register(oauthInstagramRoutes);
+await app.register(oauthThreadsRoutes);
 
 const port = Number(process.env.PORT ?? 4000);
 

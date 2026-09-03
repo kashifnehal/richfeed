@@ -5,10 +5,26 @@ import {
   recordPublishAttempt,
   updatePostTargetStatus,
 } from "../db/queries";
+import { publishToFacebook } from "../platforms/facebook";
+import { publishToInstagram } from "../platforms/instagram";
+import { publishToThreads } from "../platforms/threads";
 import { publishToX } from "../platforms/x";
-import { PlatformPublishError } from "../platforms/types";
+import { PlatformPublishError, type PublishAccount, type PublishResult } from "../platforms/types";
 import { getRedisConnection } from "./connection";
 import { QUEUE_NAME, type PublishJobPayload } from "./scheduler";
+
+type PublishAdapter = (
+  account: PublishAccount,
+  target: { id: string; platformCaptionOverride: string | null },
+  post: { caption: string | null; mediaUrls: string[] | null; mediaType: import("@richfeed/shared").MediaType | null },
+) => Promise<PublishResult>;
+
+const ADAPTERS: Partial<Record<string, PublishAdapter>> = {
+  twitter: publishToX,
+  facebook: publishToFacebook,
+  instagram: publishToInstagram,
+  threads: publishToThreads,
+};
 
 /**
  * Processes a single publish job: pending -> publishing -> published (or
@@ -28,8 +44,10 @@ async function processPublishJob(job: Job<PublishJobPayload>): Promise<void> {
   await updatePostTargetStatus(postTargetId, "publishing");
 
   try {
-    if (account.platform === "twitter") {
-      const result = await publishToX(
+    const adapter = ADAPTERS[account.platform];
+
+    if (adapter) {
+      const result = await adapter(
         {
           id: account.id,
           platformAccountId: account.platform_account_id,
@@ -42,14 +60,14 @@ async function processPublishJob(job: Job<PublishJobPayload>): Promise<void> {
         { caption: post.caption, mediaUrls: post.mediaUrls, mediaType: post.mediaType },
       );
 
-      await updatePostTargetStatus(postTargetId, "published", result.platformPostId);
+      await updatePostTargetStatus(postTargetId, "published", result.platformPostId, result.permalinkUrl);
       await recordPublishAttempt(postTargetId, { httpStatus: 201, attemptNumber: 1 });
       return;
     }
 
     // TODO(next platform adapter): replace this stub with a real call, per
-    // platform, per doc 35 §1. For now every non-Twitter platform simulates
-    // network latency and always succeeds.
+    // platform, per doc 35 §1. For now every platform without an adapter yet
+    // simulates network latency and always succeeds.
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const fakePlatformPostId = `stub_${postTargetId.slice(0, 8)}_${Date.now()}`;
 

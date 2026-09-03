@@ -268,6 +268,49 @@ rather than read from that var — see `platforms/x.md`. "Reconnect" on an
 existing account (any status) is still a placeholder toast — only the
 initial Connect flow is real. No avatar is fetched/stored from X yet.
 
+## 2026-09-03 — Real Instagram + Facebook Pages + Threads OAuth/publish; Playwright E2E suite removed (commit PENDING)
+
+What shipped: three more real platform integrations, reusing X's
+conventions (`platforms/x.ts`) — `routes/oauth-instagram.ts`,
+`routes/oauth-facebook.ts`, `routes/oauth-threads.ts`, and
+`platforms/instagram.ts` / `facebook.ts` / `threads.ts`, all dispatched from
+`queue/worker.ts` via a platform->adapter map (replacing the earlier
+single `platform === "twitter"` branch). Facebook is the one platform that
+can return multiple connectable accounts from one OAuth grant — its
+callback hands off to a new picker screen
+(`app/(dashboard)/accounts/connect/facebook/`) instead of upserting
+straight back to `/accounts`, backed by a new Redis-based short-lived
+key/value store (`lib/pending-store.ts`). `lib/oauth-state.ts`'s PKCE
+verifier cookie is now optional (only X uses PKCE). Instagram rejects a
+Personal (non-Business/Creator) account at connect time rather than storing
+a row that would only fail later at publish. `post_targets.permalink_url`
+(migration `0005`) is a new stored column — Instagram/Threads permalinks
+are opaque and have to be fetched from the platform's own API, so every
+adapter (X included, refactored to match) now returns a real
+`permalinkUrl` the worker persists, and the frontend's `buildPermalinkUrl`
+helper is now a plain read of that column instead of a per-platform
+client-side pattern.
+
+Also shipped: the Playwright E2E suite (`apps/web/e2e/`, `playwright.config.ts`,
+the `test:e2e` scripts, `@playwright/test`) was removed at the user's
+explicit request, mid-session. `CLAUDE.md`'s verification guidance was
+updated to match — targeted build/lint checks and manual click-throughs,
+no automated E2E step. This is a deviation from the step's own written
+spec, which still called for "the full existing Playwright suite" as part
+of VERIFY; superseded by the live instruction.
+
+Deviations/known gaps: Meta's auth-failure shape (HTTP 400 + `error.code
+190`, not a plain 401/403) is handled via a shared `platforms/meta-shared.ts`
+helper. No refresh-before-expiry job exists for Threads'/Instagram's 60-day
+long-lived tokens (flagged in `platforms/threads.md`, out of scope for this
+step). The Threads OAuth route added an identity call
+(`GET /v1.0/me?fields=id,username`) not present in the original build spec —
+needed to populate `platform_account_id`/`display_name`, same as every
+other platform's OAuth route already does. None of the four OAuth
+click-throughs, and no real scheduled post to any of the three new
+platforms, could be driven manually in this environment (no live browser) —
+see the step's report for exactly what to click through.
+
 ## Template for future entries
 
 ```
