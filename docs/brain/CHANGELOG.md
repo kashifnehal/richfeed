@@ -237,7 +237,7 @@ worker publish step is a stub, and there are no platform OAuth env vars.
 
 ---
 
-## 2026-09-03 — Real X (Twitter) OAuth + publish; account disconnect is soft-delete (commit PENDING)
+## 2026-09-03 — Real X (Twitter) OAuth + publish; account disconnect is soft-delete (commit f47305b)
 
 What shipped: the first real platform integration in the codebase.
 `apps/api/src/platforms/x.ts` (adapter) + `apps/api/src/routes/oauth-x.ts`
