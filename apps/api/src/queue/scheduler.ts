@@ -66,6 +66,10 @@ export async function enqueuePublishJob(
   return getPublishQueue().add(
     "publish",
     { postTargetId },
-    { delay, removeOnComplete: true, removeOnFail: false },
+    // removeOnFail: false kept failed jobs (and their data) in Redis forever.
+    // A failed job's history is already durably recorded in Postgres
+    // (publish_attempts / post_targets.status) via processPublishJob, so
+    // Redis only needs to keep the most recent few for operator visibility.
+    { delay, removeOnComplete: true, removeOnFail: { count: 50 } },
   );
 }

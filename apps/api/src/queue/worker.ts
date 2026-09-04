@@ -110,6 +110,16 @@ export function startWorker(): Worker<PublishJobPayload> {
 
   worker = new Worker<PublishJobPayload>(QUEUE_NAME, processPublishJob, {
     connection: getRedisConnection(),
+    // Defaults (drainDelay 5s, stalledInterval 30s) poll Redis continuously
+    // even with an empty queue — ~20k+ commands/day per running worker doing
+    // nothing, which blew through Upstash's free monthly command cap with
+    // zero real posts published. This queue processes at most a handful of
+    // jobs/day, so a slower idle poll costs nothing in practice: a job still
+    // starts within seconds of being added (BullMQ also gets an immediate
+    // wake-up event on `add`, independent of drainDelay), it just stops
+    // burning commands while sitting idle between polls.
+    drainDelay: 60,
+    stalledInterval: 5 * 60 * 1000,
   });
 
   worker.on("failed", (job, err) => {

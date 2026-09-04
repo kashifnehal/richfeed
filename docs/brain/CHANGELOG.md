@@ -389,6 +389,34 @@ the account to `needs_reconnect`. Full write-up in `platforms/x.md`
 credits. `railway.json` is documentation only — no Railway project has been
 created yet.
 
+## 2026-09-04 — Fix Upstash command-usage leak from idle BullMQ polling
+
+What shipped: a services-usage audit (Railway, Vercel, Upstash, Supabase) found
+Upstash's Redis usage running at ~171,600 commands in ~9 days (~570k/mo,
+over the 500k/mo free cap) with almost no real jobs — a keyspace_hits:misses
+ratio of roughly 1:4 pointed at idle polling rather than real work. Root
+cause: `startWorker()` (`apps/api/src/queue/worker.ts`) created the BullMQ
+`Worker` with all default options — a 5s `drainDelay` blocking-poll loop plus
+a 30s `stalledInterval` stalled-job scan, both running continuously whenever
+any worker process (local `pnpm dev`/`worker`, or a deployed worker) is
+alive, regardless of queue depth. Fix: `drainDelay: 60`, `stalledInterval: 5
+* 60 * 1000` (~10x fewer idle commands; BullMQ's immediate wake-up event on
+`add()` means enqueued jobs still start within seconds, unaffected by
+`drainDelay`). Also `enqueuePublishJob` (`scheduler.ts`) changed
+`removeOnFail: false` → `removeOnFail: { count: 50 }` so failed jobs stop
+accumulating in Redis forever (failure history already persists durably in
+Postgres via `publish_attempts`). Manually deleted 2 stale leftover
+failed-job keys found during the audit.
+
+Deviations/known gaps: this caps the idle poll rate but doesn't eliminate
+the underlying pattern — running the worker only when actually testing
+publishing (`pnpm --filter api dev` instead of root `pnpm dev`) remains the
+biggest lever and is a workflow habit, not a code fix. The rest of the
+audit (Railway: two always-on services, one crashed on a stale deploy, the
+other missing all runtime secrets; Vercel: healthy, no Ignored Build Step;
+Supabase: healthy) was reported but is unresolved — out of scope for this
+commit.
+
 ## Template for future entries
 
 ```
