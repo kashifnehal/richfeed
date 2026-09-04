@@ -351,7 +351,7 @@ documented convention — untested against a real published post (no live
 browser in this environment). Neither OAuth click-through, nor a real
 scheduled post to LinkedIn or YouTube, could be driven manually here.
 
-## 2026-09-04 — RichFeed branding pass, worker/prod-deploy prep, X publish verified to real API (commit <sha>)
+## 2026-09-04 — RichFeed branding pass, worker/prod-deploy prep, X publish verified to real API (commits 576986c, de4e223)
 
 What shipped, Task 0: `apps/web` no longer says "The Social Queue" / "Blue
 Beacon Research" anywhere user-facing — page `<title>` + meta description
