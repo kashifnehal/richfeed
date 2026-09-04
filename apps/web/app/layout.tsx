@@ -5,9 +5,9 @@ import "./globals.css";
 import { ToastProvider } from "../components/shared/Toast";
 
 export const metadata: Metadata = {
-  title: "The Social Queue",
+  title: "RichFeed",
   description:
-    "Social media scheduling and multi-account publishing for Blue Beacon Research",
+    "Social media scheduling and multi-account publishing",
 };
 
 export default function RootLayout({

@@ -88,7 +88,7 @@ export default function ConnectFacebookPagesPage() {
     <div className="mx-auto max-w-lg rounded-card border border-subtle-2 bg-surface p-6">
       <h1 className="text-base font-semibold text-primary">Choose Facebook Pages to connect</h1>
       <p className="mt-1 text-sm text-secondary">
-        Only the Pages you select are connected to The Social Queue.
+        Only the Pages you select are connected to RichFeed.
       </p>
 
       {!pages ? (

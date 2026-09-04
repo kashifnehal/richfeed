@@ -113,7 +113,7 @@ export function AccountCard({ account, onChanged }: AccountCardProps): ReactElem
           open={confirmAction === "remove"}
           onOpenChange={(open) => setConfirmAction(open ? "remove" : null)}
           title="Remove this account permanently?"
-          description={`This deletes ${account.displayName ?? PLATFORM_LABELS[account.platform]} from The Social Queue for good. Blocked while any scheduled or published posts still reference it.`}
+          description={`This deletes ${account.displayName ?? PLATFORM_LABELS[account.platform]} from RichFeed for good. Blocked while any scheduled or published posts still reference it.`}
           confirmLabel="Remove permanently"
           onConfirm={() => void handleRemove()}
         />
@@ -122,7 +122,7 @@ export function AccountCard({ account, onChanged }: AccountCardProps): ReactElem
           open={confirmAction === "disconnect"}
           onOpenChange={(open) => setConfirmAction(open ? "disconnect" : null)}
           title="Disconnect this account?"
-          description={`The Social Queue will stop publishing to ${account.displayName ?? PLATFORM_LABELS[account.platform]}. Its post history stays intact and you can reconnect it later.`}
+          description={`RichFeed will stop publishing to ${account.displayName ?? PLATFORM_LABELS[account.platform]}. Its post history stays intact and you can reconnect it later.`}
           confirmLabel="Disconnect"
           onConfirm={() => void handleDisconnect()}
         />

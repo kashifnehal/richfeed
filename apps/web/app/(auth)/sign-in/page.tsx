@@ -34,7 +34,7 @@ export default function SignInPage() {
   return (
     <div>
       <h1 className="text-lg font-semibold text-primary">Sign in</h1>
-      <p className="mt-1 text-sm text-secondary">Welcome back to The Social Queue.</p>
+      <p className="mt-1 text-sm text-secondary">Welcome back to RichFeed.</p>
 
       <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
         <Input

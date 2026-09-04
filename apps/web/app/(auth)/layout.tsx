@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: { children: ReactNode }): React
               <path d="M4 7h16M4 12h16M4 17h11" />
             </svg>
           </span>
-          <span className="text-base font-extrabold tracking-tight text-primary">The Social Queue</span>
+          <span className="text-base font-extrabold tracking-tight text-primary">RichFeed</span>
         </div>
         <div className="rounded-card border border-subtle-2 bg-surface p-7 shadow-sm">
           {children}

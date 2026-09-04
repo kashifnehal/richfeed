@@ -63,7 +63,7 @@ export default function SignUpPage() {
   return (
     <div>
       <h1 className="text-lg font-semibold text-primary">Create your account</h1>
-      <p className="mt-1 text-sm text-secondary">Start scheduling with The Social Queue.</p>
+      <p className="mt-1 text-sm text-secondary">Start scheduling with RichFeed.</p>
 
       <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
         <Input
