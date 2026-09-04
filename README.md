@@ -38,10 +38,19 @@ cp apps/api/.env.example apps/api/.env
 pnpm dev
 ```
 
-`pnpm dev` runs both apps in parallel with live reload:
+`pnpm dev` (from the repo root) runs **three** processes in parallel with live reload
+(`turbo run dev worker`):
 
 - Web: <http://localhost:3000>
 - API: <http://localhost:4000> (health check: <http://localhost:4000/health>)
+- Publish worker: the BullMQ consumer (`apps/api/src/worker-entry.ts`), a separate
+  Node process that actually pushes scheduled posts out to each platform.
+
+> **Run `pnpm dev` from the repo root, not from `apps/api`.** `apps/api`'s own
+> `pnpm dev` starts only the Fastify server — *not* the worker. With no worker
+> running, a scheduled post is created and enqueued but never processed: its
+> `post_targets` row sits at `pending` (or `queued`) forever, with zero
+> `publish_attempts` and no error. If you see that, the worker wasn't running.
 
 The `/health` route and the web app both start with **no** env vars set — Supabase and Redis
 clients are instantiated lazily and are not used yet in this milestone.
@@ -60,6 +69,6 @@ clients are instantiated lazily and are not used yet in this milestone.
 
 | Command | Description |
 | --- | --- |
-| `pnpm dev` | Run `apps/web` and `apps/api` dev servers in parallel (persistent, uncached) |
+| `pnpm dev` | Run `apps/web`, `apps/api`, and the publish worker in parallel (persistent, uncached) |
 | `pnpm build` | Build all packages and apps |
 | `pnpm lint` | Lint all packages and apps |

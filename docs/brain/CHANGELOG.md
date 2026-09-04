@@ -351,6 +351,44 @@ documented convention — untested against a real published post (no live
 browser in this environment). Neither OAuth click-through, nor a real
 scheduled post to LinkedIn or YouTube, could be driven manually here.
 
+## 2026-09-04 — RichFeed branding pass, worker/prod-deploy prep, X publish verified to real API (commit <sha>)
+
+What shipped, Task 0: `apps/web` no longer says "The Social Queue" / "Blue
+Beacon Research" anywhere user-facing — page `<title>` + meta description
+(`app/layout.tsx`), the auth-screen wordmark (`app/(auth)/layout.tsx`),
+sign-in/sign-up copy, the Facebook connect blurb, and the account
+remove/disconnect dialog copy (`AccountCard.tsx`) are all "RichFeed" now.
+Historical docs left as-is.
+
+What shipped, Task 1: diagnosed the stuck X test post from 2026-09-03
+(`post_targets` row at `pending`, zero `publish_attempts`, no error) — the
+worker process simply wasn't running (root `pnpm dev` = `turbo run dev
+worker`; `apps/api`'s own `pnpm dev` starts only Fastify). Documented the
+gotcha in `README.md`. New reusable scripts in `apps/api/src/scripts/`:
+`inspect-posts.ts` (read-only dump of recent posts/targets/attempts, filter
+by `--platform`) and `publish-test-post.ts` (publish a real post to a
+connected account now, poll to terminal state). With all three processes up,
+a fresh text-only post to `@RichFeed_social` ran the full
+enqueue → worker → `platforms/x.ts` → `POST https://api.x.com/2/tweets`
+path for real. OAuth + token refresh (rotation persisted) both work.
+
+What shipped, Task 2: `worker:prod` script in `apps/api/package.json`
+(`tsx` without `watch`), and `railway.json` at the repo root documenting the
+two services this monorepo deploys as — API (`pnpm --filter api start`) and
+worker (`pnpm --filter api run worker:prod`), both with repo root as the
+Railway Root Directory (pnpm workspace: `apps/api` depends on
+`@richfeed/shared`). `server.ts` already binds `0.0.0.0` and reads `PORT`.
+
+Deviations/known gaps: **the fresh X test post did not land on a real
+profile** — X returned `402 {"detail":"credits depleted", ...
+"type":".../credits-depleted"}`. This is the X developer project's billing
+state under X's pay-per-use API model, not a RichFeed bug; the adapter marks
+the target `failed` with the real 402/message and correctly does *not* flip
+the account to `needs_reconnect`. Full write-up in `platforms/x.md`
+("Known blocker"). Re-run `publish-test-post.ts` once the X project has
+credits. `railway.json` is documentation only — no Railway project has been
+created yet.
+
 ## Template for future entries
 
 ```

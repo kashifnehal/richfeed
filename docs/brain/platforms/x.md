@@ -1,8 +1,12 @@
 # platforms/x.md
 
-**Status: real OAuth + publish, live.** As of 2026-09-03, `apps/api/src/routes/oauth-x.ts`,
+**Status: real OAuth + publish, code-complete; live publishing blocked on X-side API
+credits (see below).** As of 2026-09-03, `apps/api/src/routes/oauth-x.ts`,
 `apps/api/src/platforms/x.ts`, and the Accounts page's "X (Twitter)" connect button
-are real — a user can connect a real X account and a real post goes out. This
+are real — a user can connect a real X account, and the publish pipeline reaches a
+real `POST /2/tweets`. As of 2026-09-04 that call returns `402 credits depleted`
+(X billing state, not a bug — see "Known blocker" below), so no post has yet
+landed on a real profile. This
 was the first platform integration built (LinkedIn's credentials were still
 pending on the founder's side), so it established the conventions every future
 platform (`platforms/<name>.ts`, `routes/oauth-<name>.ts`, worker dispatch,
@@ -95,6 +99,30 @@ platform_account_id)` uniqueness constraint keys on). The frontend helper is
 `apps/web/lib/permalink.ts`'s `buildPermalinkUrl` — returns `undefined` for
 every platform besides `twitter`, which is what keeps the Post-detail
 permalink icon inert for everything else.
+
+## Known blocker: X API `402 credits depleted` (2026-09-04)
+
+An end-to-end publish check on 2026-09-04 (worker running, real connected
+account `@RichFeed_social`, text-only post) got as far as a real
+`POST https://api.x.com/2/tweets` call and X returned:
+
+```
+HTTP 402
+{"detail":"credits depleted","status":402,"title":"Payment Required",
+ "type":"https://api.x.com/2/problems/credits-depleted"}
+```
+
+This is **not a RichFeed bug** — OAuth, the stored-token refresh
+(`grant_type=refresh_token`, rotation persisted), and the whole
+enqueue → worker → adapter path all work. It's the X developer project's
+own billing state: the API project has no write credits left under X's
+pay-per-use model, so no post can go out until the plan is topped up / a
+paid tier is attached on the X side. The adapter handles it correctly:
+`extractXError` surfaces `detail` verbatim, the target is marked `failed`
+with `http_status=402` / `error_message="credits depleted"`, and because
+402 isn't 401/403 the account is **not** flipped to `needs_reconnect`
+(reconnecting wouldn't help). Re-run `src/scripts/publish-test-post.ts
+--account=<id>` once the X project has credits to confirm a real post lands.
 
 ## `needs_reconnect` trigger condition
 

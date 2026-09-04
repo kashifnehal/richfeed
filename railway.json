@@ -1,0 +1,24 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "//": "RichFeed deploys as TWO Railway services from THIS repo (pnpm workspace monorepo; apps/api depends on @richfeed/shared, so Root Directory must be the repo root for both, not apps/api). This file configures the API service; the worker service shares the same repo/root/build and only differs in start command — create it in the Railway dashboard with the settings under x-railway-services.worker below. server.ts already binds 0.0.0.0 and reads PORT.",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter api start",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "x-railway-services": {
+    "api": {
+      "rootDirectory": "/",
+      "startCommand": "pnpm --filter api start",
+      "notes": "Fastify HTTP server (src/server.ts). Needs a Railway-provided PORT plus SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, UPSTASH_REDIS_URL (rediss://), TOKEN_ENCRYPTION_KEY, FRONTEND_ORIGIN, and every platform's OAuth client id/secret/redirect."
+    },
+    "worker": {
+      "rootDirectory": "/",
+      "startCommand": "pnpm --filter api run worker:prod",
+      "notes": "BullMQ publish consumer (src/worker-entry.ts) — a separate long-running process, NOT part of server.ts. Same env as the API service (needs Supabase + Upstash Redis + TOKEN_ENCRYPTION_KEY + platform OAuth secrets for token refresh). No inbound port. worker:prod is the non-watch variant of the worker script."
+    }
+  }
+}
