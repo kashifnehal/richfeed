@@ -46,6 +46,18 @@ async function processPublishJob(job: Job<PublishJobPayload>): Promise<void> {
   }
   const { target, post, account } = context;
 
+  // Second, independent safety net against a double publish (on top of the
+  // deterministic jobId in enqueuePublishJob): if this target isn't pending
+  // anymore — already publishing/published/failed/cancelled — some other
+  // path already claimed it, so bail out before spending a real platform
+  // API call.
+  if (target.status !== "pending") {
+    console.warn(
+      `[worker] skipping job ${job.id} (post_target ${postTargetId}): status is "${target.status}", not "pending"`,
+    );
+    return;
+  }
+
   await updatePostTargetStatus(postTargetId, "publishing");
 
   try {

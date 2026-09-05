@@ -417,6 +417,61 @@ other missing all runtime secrets; Vercel: healthy, no Ignored Build Step;
 Supabase: healthy) was reported but is unresolved — out of scope for this
 commit.
 
+## 2026-09-05 — Fix scheduled posts never reaching the publish queue (commit 1cee803)
+
+What shipped: a platform-agnostic scheduling-pipeline bug, not specific to any
+one platform. `createScheduledPostWithTargets()` (behind `POST /api/posts` —
+what every "Save to queue" click hits) inserted `post_targets` rows but never
+called `enqueuePublishJob()`, and didn't even `.select()` the inserted rows
+back to get ids to enqueue with. `rescheduleTarget()` (behind PATCH
+`/api/posts/:id` `action: "reschedule"`, i.e. "Fix and reschedule") had the
+same gap. `duplicatePostToAccount()` inherited it by calling
+`createScheduledPostWithTargets()` internally. The only caller of
+`enqueuePublishJob()` anywhere in the codebase was the manual
+`scripts/verify-pipeline.ts` test script — meaning no post scheduled or
+rescheduled through the real product had ever actually been handed to
+BullMQ, regardless of the worker being online. This is why an earlier X post
+vanished and why a since-fixed-OAuth Instagram post never fired.
+
+Fix, in `apps/api/src/db/queries.ts` and `apps/api/src/queue/scheduler.ts`:
+`createScheduledPostWithTargets()` now `.select("id, publish_at")`s the
+inserted targets and calls `enqueuePublishJob()` for each; `rescheduleTarget()`
+now calls it after its DB update succeeds. `enqueuePublishJob()` now passes a
+deterministic `jobId` equal to the `post_target.id` — verified directly
+against BullMQ 6.3.1's `addDelayedJob` Lua script that re-adding an existing,
+unremoved jobId safely no-ops (`handleDuplicatedJob`) rather than creating a
+duplicate or throwing, so a double-enqueue can never cause a double publish.
+`apps/api/src/queue/worker.ts`'s `processPublishJob` also gained an
+independent second safety net: it now bails out with a warning if a job's
+target isn't `status: "pending"` when picked up, before calling any platform
+adapter. `cancelTarget()`/`cancelAllTargetsForPost()` now best-effort remove
+the matching queued job(s) on cancel, so a cancelled target's delayed job
+doesn't sit around to fail loudly (harmlessly — it can't publish anything,
+since `getPublishJobContext` returns null for a deleted target) later.
+
+Verified without touching any real platform API or connected account: a new
+throwaway script, `apps/api/src/scripts/verify-enqueue-fix.ts` (kept
+alongside `verify-pipeline.ts` as a reusable regression check), drives the
+real `createScheduledPostWithTargets()` and `rescheduleTarget()` against a
+throwaway Supabase user + a fake-token `social_accounts` row, with the
+worker process not running, and asserts directly against
+`getPublishQueue()` that a real BullMQ job now exists with the right
+`jobId`/payload/delay, that a duplicate enqueue doesn't add a second job,
+and that reschedule updates both the DB row and the queued job. All
+assertions passed; test rows and jobs were cleaned up afterward.
+
+Deviations/known gaps: the Edit Post screen's "Save changes" vs "Fix and
+reschedule" buttons were audited per the same task and found correct
+already (they call PATCH `action: "update"` and `action: "reschedule"`
+respectively, and `ScheduleTimePicker` converts the local `datetime-local`
+input to a real UTC ISO string via `new Date(local).toISOString()` — no
+timezone bug) — no code change was needed there. Separately (found during
+verification, not part of this bug): the throwaway-user cleanup pattern
+shared with `verify-pipeline.ts` can fail to delete the auth user because
+the `on_auth_user_created_create_workspace` trigger's `workspaces` row has
+no cascade back to `auth.users` deletion — pre-existing, unrelated to this
+fix, left as a known gap in the test-cleanup pattern rather than fixed here.
+
 ## Template for future entries
 
 ```

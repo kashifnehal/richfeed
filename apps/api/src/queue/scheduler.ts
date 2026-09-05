@@ -48,8 +48,24 @@ export interface EnqueuePublishJobOptions {
 }
 
 /**
+ * Deterministic BullMQ jobId for a given post_target — same id everywhere a
+ * job for that target is added or removed, so re-enqueuing is idempotent.
+ */
+export function publishJobId(postTargetId: string): string {
+  return postTargetId;
+}
+
+/**
  * Enqueue a publish job for postTargetId, delayed until publishAt (clamped
  * to 0 if publishAt is already in the past) plus a random 2-5 minute jitter.
+ *
+ * Uses a jobId equal to postTargetId, so calling this twice for the same
+ * target (double-click, retry, a future bug) is safe: BullMQ's add() is a
+ * no-op when a job with that id already exists and hasn't been removed yet
+ * (confirmed against bullmq's addDelayedJob Lua script — it detects the
+ * existing job key and returns early via handleDuplicatedJob instead of
+ * creating a second job or throwing), so this never risks a double publish
+ * via duplicate jobs.
  */
 export async function enqueuePublishJob(
   postTargetId: string,
@@ -70,6 +86,6 @@ export async function enqueuePublishJob(
     // A failed job's history is already durably recorded in Postgres
     // (publish_attempts / post_targets.status) via processPublishJob, so
     // Redis only needs to keep the most recent few for operator visibility.
-    { delay, removeOnComplete: true, removeOnFail: { count: 50 } },
+    { jobId: publishJobId(postTargetId), delay, removeOnComplete: true, removeOnFail: { count: 50 } },
   );
 }

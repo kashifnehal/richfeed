@@ -10,6 +10,7 @@ import type {
   WorkspaceDto,
 } from "@richfeed/shared";
 import { getSupabaseClient } from "./supabase";
+import { enqueuePublishJob, getPublishQueue, publishJobId } from "../queue/scheduler";
 
 /**
  * Typed query layer over the Step-2 schema (supabase/migrations/0001_init_schema.sql).
@@ -694,7 +695,7 @@ export async function createScheduledPostWithTargets(
   });
 
   if (input.targets.length > 0) {
-    const { error } = await getSupabaseClient()
+    const { data: inserted, error } = await getSupabaseClient()
       .from("post_targets")
       .insert(
         input.targets.map((t) => ({
@@ -703,10 +704,18 @@ export async function createScheduledPostWithTargets(
           publish_at: t.publishAt,
           platform_caption_override: t.captionOverride ?? null,
         })),
-      );
+      )
+      .select("id, publish_at");
 
     if (error) {
       throw new DbError(`Failed to add targets for post ${post.id}: ${error.message}`, error);
+    }
+
+    // Hand every newly-created target to the publish queue — this is the
+    // step that used to be missing entirely, so nothing scheduled through
+    // the real product ever actually reached the worker (see CHANGELOG).
+    for (const target of (inserted ?? []) as { id: string; publish_at: string }[]) {
+      await enqueuePublishJob(target.id, new Date(target.publish_at));
     }
   }
 
@@ -793,7 +802,24 @@ export async function rescheduleTarget(
   if (error) {
     throw new DbError(`Failed to reschedule target ${targetId}: ${error.message}`, error);
   }
+
+  await enqueuePublishJob(targetId, new Date(publishAt));
   return { ok: true };
+}
+
+/**
+ * Best-effort removal of a target's queued publish job. A delayed job left
+ * behind after its target row is deleted would just fail loudly and
+ * harmlessly later (getPublishJobContext returns null), so this is cleanup
+ * for noise, not a safety requirement — swallow any error.
+ */
+async function removePublishJob(targetId: string): Promise<void> {
+  try {
+    const job = await getPublishQueue().getJob(publishJobId(targetId));
+    await job?.remove();
+  } catch (err) {
+    console.warn(`[queries] failed to remove publish job for target ${targetId}:`, err);
+  }
 }
 
 export async function cancelTarget(
@@ -809,6 +835,7 @@ export async function cancelTarget(
   if (error) {
     throw new DbError(`Failed to cancel target ${targetId}: ${error.message}`, error);
   }
+  await removePublishJob(targetId);
   return { ok: true };
 }
 
@@ -825,6 +852,16 @@ export async function cancelAllTargetsForPost(userId: string, postId: string): P
   }
   if (!postRow) return false;
 
+  const { data: cancelable, error: lookupErr } = await getSupabaseClient()
+    .from("post_targets")
+    .select("id")
+    .eq("scheduled_post_id", postId)
+    .neq("status", "published");
+
+  if (lookupErr) {
+    throw new DbError(`Failed to look up targets for post ${postId}: ${lookupErr.message}`, lookupErr);
+  }
+
   const { error } = await getSupabaseClient()
     .from("post_targets")
     .delete()
@@ -834,6 +871,8 @@ export async function cancelAllTargetsForPost(userId: string, postId: string): P
   if (error) {
     throw new DbError(`Failed to cancel targets for post ${postId}: ${error.message}`, error);
   }
+
+  await Promise.all(((cancelable ?? []) as { id: string }[]).map((t) => removePublishJob(t.id)));
   return true;
 }
 
