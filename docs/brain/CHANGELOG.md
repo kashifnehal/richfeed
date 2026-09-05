@@ -417,7 +417,7 @@ other missing all runtime secrets; Vercel: healthy, no Ignored Build Step;
 Supabase: healthy) was reported but is unresolved — out of scope for this
 commit.
 
-## 2026-09-05 — Fix scheduled posts never reaching the publish queue (commit 1cee803)
+## 2026-09-05 — Fix scheduled posts never reaching the publish queue (commit 75333f9)
 
 What shipped: a platform-agnostic scheduling-pipeline bug, not specific to any
 one platform. `createScheduledPostWithTargets()` (behind `POST /api/posts` —
