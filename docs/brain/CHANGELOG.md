@@ -472,7 +472,7 @@ the `on_auth_user_created_create_workspace` trigger's `workspaces` row has
 no cascade back to `auth.users` deletion — pre-existing, unrelated to this
 fix, left as a known gap in the test-cleanup pattern rather than fixed here.
 
-## 2026-09-06 — Fix YouTube OAuth connect (403 on channel lookup) (commit <sha>)
+## 2026-09-06 — Fix YouTube OAuth connect (403 on channel lookup) (commit a8ce11e)
 
 What shipped: YouTube "Connect" failed every time with "Couldn't connect that
 YouTube channel" right after Google's consent screen. Railway logs on
@@ -491,7 +491,7 @@ OAuth routes unchanged. `docs/brain/platforms/youtube.md` updated.
 ## Template for future entries
 
 ```
-## YYYY-MM-DD — <short title> (commit <sha>)
+## YYYY-MM-DD — <short title> (commit a8ce11e)
 
 What shipped: <one paragraph — what a reader needs to know changed>
 
