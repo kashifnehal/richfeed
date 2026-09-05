@@ -3,14 +3,20 @@ import type { FastifyInstance } from "fastify";
 import { encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import { frontendOrigin } from "../lib/frontend-origin";
-import { clearOAuthAttemptCookies, readOAuthAttemptCookies, setOAuthAttemptCookies } from "../lib/oauth-state";
+import {
+  clearOAuthAttemptCookies,
+  readOAuthAttemptCookies,
+  setOAuthAttemptCookies,
+} from "../lib/oauth-state";
 import { upsertSocialAccount } from "../db/queries";
 import { resolveConnectTicket } from "./oauth-connect-ticket";
 
 const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true";
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+const CHANNELS_URL =
+  "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true";
+const SCOPE =
+  "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly";
 
 function generateState(): string {
   return randomBytes(24).toString("base64url");
@@ -19,35 +25,40 @@ function generateState(): string {
 export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/oauth/youtube/start — see oauth-x.ts / oauth-connect-ticket.ts
   // for why this reads ?ticket instead of an Authorization header.
-  app.get<{ Querystring: { ticket?: string } }>("/api/oauth/youtube/start", async (request, reply) => {
-    const userId = await resolveConnectTicket(request.query.ticket);
-    if (!userId) {
-      return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
-    }
+  app.get<{ Querystring: { ticket?: string } }>(
+    "/api/oauth/youtube/start",
+    async (request, reply) => {
+      const userId = await resolveConnectTicket(request.query.ticket);
+      if (!userId) {
+        return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
+      }
 
-    let clientId: string;
-    let redirectUri: string;
-    try {
-      clientId = requireEnv("YOUTUBE_CLIENT_ID");
-      redirectUri = requireEnv("YOUTUBE_REDIRECT_URI");
-    } catch (err) {
-      app.log.error(err, "[oauth-youtube] missing env config for /start");
-      return reply.redirect(`${frontendOrigin()}/accounts?error=youtube_connect_failed`);
-    }
+      let clientId: string;
+      let redirectUri: string;
+      try {
+        clientId = requireEnv("YOUTUBE_CLIENT_ID");
+        redirectUri = requireEnv("YOUTUBE_REDIRECT_URI");
+      } catch (err) {
+        app.log.error(err, "[oauth-youtube] missing env config for /start");
+        return reply.redirect(
+          `${frontendOrigin()}/accounts?error=youtube_connect_failed`,
+        );
+      }
 
-    const state = generateState();
-    setOAuthAttemptCookies(request, reply, "youtube", { state, userId });
+      const state = generateState();
+      setOAuthAttemptCookies(request, reply, "youtube", { state, userId });
 
-    // access_type=offline + prompt=consent are both required to reliably
-    // get a refresh_token back — Google only issues one on first consent
-    // otherwise.
-    const authorizeUrl =
-      `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(SCOPE)}` +
-      `&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
+      // access_type=offline + prompt=consent are both required to reliably
+      // get a refresh_token back — Google only issues one on first consent
+      // otherwise.
+      const authorizeUrl =
+        `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(SCOPE)}` +
+        `&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
 
-    return reply.redirect(authorizeUrl);
-  });
+      return reply.redirect(authorizeUrl);
+    },
+  );
 
   // GET /api/oauth/youtube/callback
   app.get<{ Querystring: { code?: string; state?: string; error?: string } }>(
@@ -58,14 +69,21 @@ export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
       clearOAuthAttemptCookies(request, reply, "youtube");
 
       if (!cookies.state || !state || cookies.state !== state) {
-        return reply.redirect(`${frontendOrigin()}/accounts?error=youtube_state_mismatch`);
+        return reply.redirect(
+          `${frontendOrigin()}/accounts?error=youtube_state_mismatch`,
+        );
       }
       if (!cookies.userId) {
         return reply.redirect(`${frontendOrigin()}/sign-in?returnTo=/accounts`);
       }
       if (providerError || !code) {
-        app.log.warn({ providerError }, "[oauth-youtube] callback denied or missing code");
-        return reply.redirect(`${frontendOrigin()}/accounts?error=youtube_connect_failed`);
+        app.log.warn(
+          { providerError },
+          "[oauth-youtube] callback denied or missing code",
+        );
+        return reply.redirect(
+          `${frontendOrigin()}/accounts?error=youtube_connect_failed`,
+        );
       }
 
       try {
@@ -85,7 +103,9 @@ export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
           }),
         });
         if (!tokenRes.ok) {
-          throw new Error(`YouTube token exchange failed with status ${tokenRes.status}`);
+          throw new Error(
+            `YouTube token exchange failed with status ${tokenRes.status}`,
+          );
         }
         const tokenBody = (await tokenRes.json()) as {
           access_token: string;
@@ -97,7 +117,9 @@ export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
           // first-time connect, but a reconnect without prompt=consent
           // re-triggering could still omit it — fail clearly rather than
           // storing an account that can never refresh.
-          throw new Error("Google did not return a refresh_token for this connection");
+          throw new Error(
+            "Google did not return a refresh_token for this connection",
+          );
         }
 
         // The channel id is the only usable platform_account_id here (no
@@ -111,14 +133,24 @@ export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
           headers: { Authorization: `Bearer ${tokenBody.access_token}` },
         });
         if (!channelRes.ok) {
-          throw new Error(`YouTube channel lookup failed with status ${channelRes.status}`);
+          throw new Error(
+            `YouTube channel lookup failed with status ${channelRes.status}`,
+          );
         }
         const channelBody = (await channelRes.json()) as {
-          items?: { id: string; snippet: { title: string; thumbnails?: { default?: { url: string } } } }[];
+          items?: {
+            id: string;
+            snippet: {
+              title: string;
+              thumbnails?: { default?: { url: string } };
+            };
+          }[];
         };
         const channel = channelBody.items?.[0];
         if (!channel) {
-          throw new Error("YouTube channel lookup returned no channels for this account");
+          throw new Error(
+            "YouTube channel lookup returned no channels for this account",
+          );
         }
 
         await upsertSocialAccount({
@@ -129,14 +161,18 @@ export async function oauthYouTubeRoutes(app: FastifyInstance): Promise<void> {
           avatarUrl: channel.snippet.thumbnails?.default?.url ?? null,
           accessTokenEncrypted: encrypt(tokenBody.access_token),
           refreshTokenEncrypted: encrypt(tokenBody.refresh_token),
-          tokenExpiresAt: new Date(Date.now() + tokenBody.expires_in * 1000).toISOString(),
-          scopes: [SCOPE],
+          tokenExpiresAt: new Date(
+            Date.now() + tokenBody.expires_in * 1000,
+          ).toISOString(),
+          scopes: SCOPE.split(" "),
         });
 
         return reply.redirect(`${frontendOrigin()}/accounts?connected=youtube`);
       } catch (err) {
         app.log.error(err, "[oauth-youtube] callback failed");
-        return reply.redirect(`${frontendOrigin()}/accounts?error=youtube_connect_failed`);
+        return reply.redirect(
+          `${frontendOrigin()}/accounts?error=youtube_connect_failed`,
+        );
       }
     },
   );

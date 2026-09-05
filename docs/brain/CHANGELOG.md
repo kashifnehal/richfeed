@@ -472,6 +472,22 @@ the `on_auth_user_created_create_workspace` trigger's `workspaces` row has
 no cascade back to `auth.users` deletion — pre-existing, unrelated to this
 fix, left as a known gap in the test-cleanup pattern rather than fixed here.
 
+## 2026-09-06 — Fix YouTube OAuth connect (403 on channel lookup) (commit <sha>)
+
+What shipped: YouTube "Connect" failed every time with "Couldn't connect that
+YouTube channel" right after Google's consent screen. Railway logs on
+`richfeed-api` (two real attempts) showed the token exchange succeeding but the
+immediately-following `GET .../youtube/v3/channels?part=snippet&mine=true`
+identity read returning HTTP 403 — the `/start` route requested only
+`https://www.googleapis.com/auth/youtube.upload`, which authorizes
+uploading/managing videos but not reading channel metadata. `apps/api/src/routes/oauth-youtube.ts`
+now requests `youtube.upload https://www.googleapis.com/auth/youtube.readonly`
+(space-separated), and `upsertSocialAccount` stores both as separate `scopes`
+entries (`SCOPE.split(" ")`). Scope-only change — state/cookie handling,
+connect-ticket pattern, token exchange, and token encryption untouched. No
+other YouTube scope string exists elsewhere in the codebase; other platforms'
+OAuth routes unchanged. `docs/brain/platforms/youtube.md` updated.
+
 ## Template for future entries
 
 ```
