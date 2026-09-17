@@ -90,3 +90,8 @@ Same as every Meta-family adapter — see `platforms/meta-shared.ts`'s
   account) where one Instagram login surfaces multiple connectable
   accounts — the "no picker needed" assumption is unverified against a real
   multi-account scenario.
+- **Video publish currently fails live** with Meta HTTP 400 "Invalid
+  parameter". Root cause unknown. As of 2026-09-18 `buildMetaError` logs the
+  full Graph API response body (tokens redacted) so the next real video
+  attempt can be diagnosed from Railway worker logs. Do not guess a fix
+  without that body.

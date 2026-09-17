@@ -1,6 +1,7 @@
 import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt, encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { logPlatformApiError, readResponseBody } from "../lib/log-platform-error";
 import { updateSocialAccountTokens } from "../db/queries";
 import {
   PlatformPublishError,
@@ -68,12 +69,13 @@ async function getValidAccessToken(account: PublishAccount): Promise<string> {
 }
 
 async function throwYouTubeError(res: Response): Promise<never> {
+  const parsed = await readResponseBody(res);
+  logPlatformApiError("youtube", res.status, res.url, parsed);
+
   let message = `YouTube API error (${res.status})`;
-  try {
-    const body = (await res.json()) as { error?: { message?: string } };
-    if (body.error?.message) message = body.error.message;
-  } catch {
-    // no JSON body — keep the generic message
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const fromBody = (parsed as { error?: { message?: string } }).error?.message;
+    if (fromBody) message = fromBody;
   }
   throw new PlatformPublishError(message, res.status === 401 || res.status === 403, res.status);
 }

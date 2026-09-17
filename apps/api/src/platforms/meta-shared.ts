@@ -1,4 +1,5 @@
 import { PlatformPublishError } from "./types";
+import { logPlatformApiError, readResponseBody } from "../lib/log-platform-error";
 
 /**
  * Shared helpers for the Meta Graph API family (Facebook Pages, Instagram,
@@ -18,12 +19,11 @@ function isMetaAuthError(status: number, body: MetaErrorBody): boolean {
 
 /** Builds (does not throw) the PlatformPublishError for a non-2xx Graph API response — `throw await buildMetaError(res)` at the call site. */
 export async function buildMetaError(res: Response): Promise<PlatformPublishError> {
-  let body: MetaErrorBody = {};
-  try {
-    body = (await res.json()) as MetaErrorBody;
-  } catch {
-    // no JSON body — fall through with the generic message below
-  }
+  const parsed = await readResponseBody(res);
+  logPlatformApiError("meta", res.status, res.url, parsed);
+
+  const body: MetaErrorBody =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as MetaErrorBody) : {};
   const message = body.error?.message ?? `Graph API error (${res.status})`;
   return new PlatformPublishError(message, isMetaAuthError(res.status, body), res.status);
 }

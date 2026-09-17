@@ -538,6 +538,17 @@ adapter allows it (the live Meta 400 is a separate publish bug).
 Deviations/known gaps: Instagram video and YouTube upload-401 are unchanged.
 Did not add a new platform. No automated test suite (founder decision).
 
+## 2026-09-18 — Log full Meta/YouTube error bodies (no behavior change)
+
+What shipped: logging only. `buildMetaError` and `throwYouTubeError` now
+write the full API response body to worker logs (tokens/secrets redacted)
+instead of keeping only the short `error.message`. User-facing publish
+errors are unchanged. Needed so the next real Instagram-video 400 and
+YouTube-upload 401 can be diagnosed from evidence.
+
+Deviations/known gaps: no fix for either bug in this commit — waiting on a
+real scheduled video to each platform after this reaches `richfeed-worker`.
+
 ## Template for future entries
 
 ```

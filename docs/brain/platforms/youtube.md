@@ -75,6 +75,15 @@ rejection.
 
 401/403 from any YouTube/Google call.
 
+## Known caveats
+
+- **Video upload currently fails live** with HTTP 401 "invalid
+  authentication credentials" on the upload-init call — separate from the
+  already-fixed connect-flow scope bug (`a8ce11e`). As of 2026-09-18
+  `throwYouTubeError` logs the full response body (tokens redacted) so the
+  next real attempt can be diagnosed from Railway worker logs. Do not guess
+  a fix without that body.
+
 ## Changelog
 
 - **2026-09-06 — YouTube connect broken by insufficient OAuth scope.**
