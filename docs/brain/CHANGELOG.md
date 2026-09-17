@@ -521,7 +521,7 @@ depleted blockers, and marks TikTok/Pinterest out of scope.
 `apps/api/src/scripts/inspect-target.ts` as a reusable read-only diagnostic
 (post_target row + BullMQ job state for a scheduled post).
 
-## 2026-09-18 — Pre-schedule media-type validation
+## 2026-09-18 — Pre-schedule media-type validation (commit 8c2faa3)
 
 What shipped: a shared per-platform media capability matrix
 (`packages/shared/src/capabilities.ts`) imported by the API, the web app, and
