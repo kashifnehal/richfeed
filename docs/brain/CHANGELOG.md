@@ -549,7 +549,7 @@ YouTube-upload 401 can be diagnosed from evidence.
 Deviations/known gaps: no fix for either bug in this commit — waiting on a
 real scheduled video to each platform after this reaches `richfeed-worker`.
 
-## 2026-09-18 — Instagram video: use REELS; YouTube publish verified live
+## 2026-09-18 — Instagram video: use REELS; YouTube publish verified live (commit 7275e57)
 
 What shipped: diagnosed from a real `richfeed-worker` log on scheduled_post
 `abf0570a-…` ("test 1 mayday"). Instagram 400 body was
