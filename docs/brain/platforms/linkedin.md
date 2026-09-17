@@ -55,9 +55,15 @@ Text-only and single-image only. Video/carousel fail immediately
   header** (not the body) — that's the `platformPostId`.
 - Permalink: `https://www.linkedin.com/feed/update/{platformPostId}/` — a
   pattern, not fetched. **Not a pattern LinkedIn formally documents.**
-  Treat a permalink that doesn't resolve as expected-possible, not a bug —
-  this hasn't been click-through verified against a real published post in
-  this environment (no live browser here).
+  **Click-through verified 2026-09-18** against a real published post (does
+  **not** 404; resolves to the right post). `platformPostId` is the share
+  URN from `x-restli-id` (e.g. `urn:li:share:7506448322102996993`). Guest
+  view of that URL showed author **Rich Feed**, heading "Rich Feed's
+  Post", and the exact caption. LinkedIn also 302s the same URN to a
+  `/posts/rich-feed-…-activity-{activityId}-…` vanity URL; both are the
+  same post. Earlier Sept 5 publish
+  `urn:li:share:7502128201083551745` ("post2 [RichFeed]") resolves the
+  same way. Treat a future 404 as unexpected now, not "expected-possible."
 
 ## `needs_reconnect` trigger condition
 

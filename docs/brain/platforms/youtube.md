@@ -84,8 +84,10 @@ rejection.
   `status=published`, `platform_post_id=57N_oV8sQC0`, permalink
   `https://www.youtube.com/watch?v=57N_oV8sQC0`, confirmed on the live
   channel. No YouTube adapter change was required for that success. The
-  earlier 401 remains unexplained and is no longer treated as the current
-  live state. Google OAuth app is still in testing/unverified status.
+  originally-reported 2026-09-05 upload-init 401 was never reproduced or
+  explained — **resolved-in-practice, unconfirmed root cause**; watch for
+  it recurring rather than treating it as fully closed. Google OAuth app
+  is still in testing/unverified status.
 - **Empty caption override became title "Untitled" (fixed 2026-09-18).**
   Scheduled post `e81f5bdd-…` (caption "test 2 : same thread") / YouTube
   target `9ea4ceb4-…` published `1GWekfH9dYE`

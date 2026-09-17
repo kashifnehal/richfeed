@@ -77,10 +77,26 @@ never a user token.
   feed response) is the actual post identifier; the adapter uses
   `post_id ?? id`.
 - Permalink: `https://www.facebook.com/{post-id}` — a pattern, not fetched.
-  Per the build spec's own caution, Meta's permalink conventions have
-  shifted before; this hasn't been click-through verified against a real
-  published post in this environment (no live browser here — see the
-  report for what to check manually).
+  `{post-id}` is `{page-id}_{feed-post-id}` (text posts use Graph `id`).
+  **Click-through verified 2026-09-18** on Page **RichFeed**
+  (`platform_account_id=1265025103369551`, also
+  `facebook.com/people/RichFeed/61593735254370`). Opening
+  `https://www.facebook.com/1265025103369551_122110481799457841`
+  redirected to `permalink.php?story_fbid=pfbid0…&id=61593735254370`
+  (not a 404). Logged-in Facebook showed dialog **"RichFeed's post"**,
+  caption matching the scheduled text, **5 minutes ago**, Public, Boost
+  URL `page_id=1265025103369551&target_id=122110481799457841`. Meta's
+  permalink host/path still shifts (`/{pageId}_{postId}` → pfbid); the
+  stored URL is the right object.
+
+## Page picker (verified 2026-09-18)
+
+Re-running Connect → Facebook on `richfeed.social` (already-linked Meta
+login "Continue as Kashif Nehal?") landed on
+`/accounts/connect/facebook?pending=…`. The picker listed one real Page
+named **RichFeed** (checkbox, not demo/fixture names). Confirm was not
+clicked this pass — the existing `social_accounts` row already matches
+that Page.
 
 Video and carousel are out of scope, same rejection pattern as every other
 adapter (`assertSupportedMedia`, checked before any network call).

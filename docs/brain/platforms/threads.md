@@ -63,3 +63,20 @@ No refresh-before-expiry job for the 60-day long-lived token — see the OAuth
 section above. The right shape is probably a scheduled job re-exchanging any
 Threads token within N days of `token_expires_at`, but building that job is
 explicitly out of scope for this step.
+
+## First live connect (2026-09-18) — not completed
+
+No `social_accounts` row with `platform='threads'` exists yet (confirmed
+in production Postgres). Connect from `richfeed.social` did start the
+real flow: connect-ticket → `GET /api/oauth/threads/start` →
+`https://threads.net/oauth/authorize` (browser landed on
+`threads.com/login?next=…/oauth/authorize` with `client_id`,
+`redirect_uri=https://richfeed-api-production.up.railway.app/api/oauth/threads/callback`,
+`scope=threads_basic,threads_content_publish`, `response_type=code`,
+CSRF `state`). That is Instagram-account login, separate from the
+Facebook session already present in the same browser. Login was not
+completed, so identity (`GET graph.threads.net/v1.0/me?fields=id,username`)
+and a first publish were not exercised. Next pass: finish Instagram
+login in that OAuth window (OAuth cookies are 10 minutes), then confirm
+the new `social_accounts` row's `platform_account_id` / `platform_username`
+are real before scheduling.

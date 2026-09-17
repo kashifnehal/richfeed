@@ -579,6 +579,24 @@ Deviations/known gaps: did not PATCH the already-published YouTube video
 `1GWekfH9dYE` — edit that title on YouTube if you want it corrected. Future
 publishes after this worker deploy pick up the fallback.
 
+## 2026-09-18 — LinkedIn + Facebook live publish click-through (docs)
+
+What shipped: no adapter change. Scheduled a real text-only post from
+`richfeed.social` (`8ad4a97e-…`) to LinkedIn personal **Rich Feed** and
+Facebook Page **RichFeed**. After jitter, both `post_targets` rows are
+`published` with real `platform_post_id` + `permalink_url`. LinkedIn
+`/feed/update/{urn:li:share:…}/` resolves to the post (not 404). Facebook
+`facebook.com/{pageId}_{postId}` redirects to the live Page post. Compose
+on production blocked LinkedIn/Facebook+video before Save to queue (same
+message as local). Threads OAuth `/start` reached real Instagram login;
+no Threads account stored. YouTube 401 flagged as resolved-in-practice
+with unconfirmed root cause.
+
+Deviations/known gaps: Threads connect/publish still unverified — needs
+Instagram login in the OAuth window. Facebook picker was opened and
+showed the real **RichFeed** Page; confirm was not clicked. Did not PATCH
+YouTube `1GWekfH9dYE` title.
+
 ## Template for future entries
 
 ```
