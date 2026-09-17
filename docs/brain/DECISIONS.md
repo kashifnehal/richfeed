@@ -223,6 +223,17 @@ connections (X/Twitter, this same step) make losing publish history on every
 disconnect an actual cost, not just a theoretical one — flagged as the real
 long-term answer back in the original hard-delete entry.
 
+## 2026-09-03 — Playwright E2E suite removed; do not recreate it
+
+The Playwright smoke suite (`apps/web/e2e/`, `playwright.config.ts`, the
+`test:e2e` scripts, `@playwright/test`) was deleted mid-session on founder
+instruction (commit `c78fc47`; see `CHANGELOG.md` 2026-09-03). Verification
+is manual: real logs, real DB rows, real platform responses, and ad-hoc
+browser click-throughs. An agent may use a Playwright MCP tool during a
+session for a one-off check; it must not check in a test suite. Reason: the
+suite was costly to keep honest against a moving product and had already
+been treated as proof when it wasn't.
+
 ## Observed drift from the scaffold prompt's assumptions (noted 2026-08-29)
 
 The prompt that created this folder assumed `apps/api/src/platforms/` and a

@@ -488,6 +488,39 @@ connect-ticket pattern, token exchange, and token encryption untouched. No
 other YouTube scope string exists elsewhere in the codebase; other platforms'
 OAuth routes unchanged. `docs/brain/platforms/youtube.md` updated.
 
+## 2026-09-17 — Railway production status check (docs only)
+
+What shipped: no code. Live-checked Railway project `richfeed`
+(`5ad8a9fa-8579-48dd-a7db-38a4d0ef8a54`) production: `richfeed-api` and
+`richfeed-worker` both SUCCESS/Online, 1 replica each in `us-west2`, both on
+`kashifnehal/richfeed@main` commit `2716e3d` (deployed 2026-09-05T19:37:10Z).
+`GET https://richfeed-api-production.up.railway.app/health` returned 200
+`{"status":"ok"}`. Last 24h API HTTP: 20 requests, 0 4xx/5xx. Updated
+`ARCHITECTURE.md` (hosting was still "local-only"), `PRODUCT.md` current
+build status, `BUSINESS.md` X-credits row, `platforms/STATUS.md` last-checked
+date. The 2026-09-04 audit claim of a crashed service / missing secrets is
+stale.
+
+Deviations/known gaps: worker runtime logs were empty in the fetch window —
+idle is expected; did not prove a publish job ran today. Did not re-verify
+Vercel. Originally uncommitted; folded into the 2026-09-18 Phase 0 docs
+cleanup commit.
+
+## 2026-09-18 — Phase 0: neutralize stale agent docs; keep inspect-target.ts
+
+What shipped: no product-logic changes. `CLAUDE.md` replaced with a short
+redirect to `AGENTS.md` (Cursor was auto-injecting the old "local-only, skip
+re-verification" policy). `PRODUCT.md` drops TikTok/Pinterest from the
+platform list and Tier 2 rollout (permanently out of scope).
+`platforms/STATUS.md` records the real YouTube upload-401 and X credits-
+depleted blockers, and marks TikTok/Pinterest out of scope.
+`features/STATUS.md` no longer claims E2E coverage (suite deleted in
+`c78fc47`). `ARCHITECTURE.md` drops the stale `apps/web/e2e/` tree line.
+`DECISIONS.md` records the Playwright-removal decision. `AGENTS.md` and
+`.cursor/` workspace MCP config added to the repo. Kept
+`apps/api/src/scripts/inspect-target.ts` as a reusable read-only diagnostic
+(post_target row + BullMQ job state for a scheduled post).
+
 ## Template for future entries
 
 ```

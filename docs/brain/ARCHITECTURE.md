@@ -3,7 +3,7 @@
 The real, current stack and repo layout. Update this whenever structure, stack,
 or system flow changes.
 
-_Last updated: 2026-08-29 (workspaces + notification_preferences tables, migration runner, workspace/notification API routes)._
+_Last updated: 2026-09-18 (removed stale `apps/web/e2e/` tree line; CLAUDE.md is now a redirect to AGENTS.md)._
 
 ## Stack
 
@@ -20,7 +20,7 @@ _Last updated: 2026-08-29 (workspaces + notification_preferences tables, migrati
 | Validation | Zod schemas in `packages/shared/src/schemas.ts`, shared by API and web |
 | Token crypto | AES-256-GCM (`apps/api/src/lib/crypto.ts`), `TOKEN_ENCRYPTION_KEY` (64 hex chars) |
 | Design system | `packages/ui` — CSS tokens (`tokens.css`) + Tailwind preset. Hard rule: no hardcoded hex/radius anywhere in `apps/web` |
-| Hosting | **Local-only. Nothing is deployed.** Real hosted Supabase + Upstash projects, used directly from local dev. |
+| Hosting | **Live.** Frontend on Vercel (`richfeed.social`). API + worker on Railway project `richfeed` (`5ad8a9fa-8579-48dd-a7db-38a4d0ef8a54`), environment `production`. Real hosted Supabase + Upstash. |
 
 ## Repo tree (as of this update)
 
@@ -47,8 +47,7 @@ richfeed/
 │   │   │   ├── supabase/          client.ts (browser), server.ts (SSR)
 │   │   │   ├── api.ts             typed fetch wrapper to apps/api
 │   │   │   └── …                  account-status, calendar, nav, platform, queue-rows, status
-│   │   ├── middleware.ts          session refresh + route protection for (dashboard)
-│   │   └── e2e/                   Playwright smoke suite (see CLAUDE.md)
+│   │   └── middleware.ts          session refresh + route protection for (dashboard)
 │   └── api/
 │       └── src/
 │           ├── server.ts          Fastify app
@@ -61,7 +60,9 @@ richfeed/
 │           ├── lib/                auth.ts (requireUser), crypto.ts (+ .test), storage.ts
 │           ├── queue/              connection.ts, scheduler.ts, worker.ts
 │           └── scripts/            apply-migrations, seed-demo-data, create-demo-user,
-│                                   e2e-purge-user, verify-pipeline
+│                                   e2e-purge-user, verify-pipeline,
+│                                   inspect-target (read-only post_target +
+│                                   BullMQ job diagnostics)
 │                                   (run via tsx --env-file-if-exists=.env)
 ├── packages/
 │   ├── ui/                        tokens.css, tailwind.preset.ts, components/
@@ -71,12 +72,27 @@ richfeed/
 │   └── config/                    shared tsconfig + ESLint config
 ├── supabase/migrations/           0001_init_schema, 0002_workspaces, 0003_notification_preferences
 ├── docs/brain/                    ← this folder
-├── CLAUDE.md                      environment gotchas + verification policy
+├── AGENTS.md                      current agent instructions (source of truth)
+├── CLAUDE.md                      deprecated redirect → AGENTS.md (file kept so tooling that expects it still finds it)
 └── turbo.json / pnpm-workspace.yaml / package.json
 ```
 
-> **Note:** `apps/api/src/platforms/` does **not exist yet.** No real platform
-> adapter has been written. The worker's publish step is still a stub.
+> **Note:** `apps/api/src/platforms/` is real for LinkedIn, X, YouTube,
+> Instagram, Facebook, and Threads. TikTok and Pinterest stay out of scope.
+> See `platforms/STATUS.md` for per-platform blockers.
+
+## Production hosting (Railway) — last checked 2026-09-17
+
+Verified live against Railway MCP + `GET https://richfeed-api-production.up.railway.app/health` (HTTP 200 `{"status":"ok"}`, `Access-Control-Allow-Origin: https://richfeed.social`).
+
+| Service | Railway ID | Live deploy | Status | Start command |
+| --- | --- | --- | --- | --- |
+| `richfeed-api` | `722a3064-5cf6-4bd7-a9e7-f32f3969fb25` | `62e0af76-3569-453a-a5cc-c9ff2424029b` · 2026-09-05T19:37:10Z | SUCCESS, Online, 1 replica `us-west2` | `pnpm --filter api start` · healthcheck `/health` |
+| `richfeed-worker` | `adadd19a-14cf-47fc-a2d7-1a539da227e8` | `9ae7b693-2048-4c6a-9ab3-b31548ea9923` · 2026-09-05T19:37:10Z | SUCCESS, Online, 1 replica `us-west2` | `pnpm --filter api run worker:prod` · no public domain |
+
+Both services deploy from `kashifnehal/richfeed@main`, commit **`2716e3d`** (same as local `main` / `origin/main` at check time). Public API host: `https://richfeed-api-production.up.railway.app`. No staged changes, no volumes/buckets. Last 24h API HTTP: 20 requests, 0 4xx, 0 5xx. Last 24h memory ~0.27 GB API / ~0.22 GB worker, CPU idle. Worker runtime logs were empty in the fetch window (idle consumer is expected); liveness is from Railway replica status + memory, not from a job-processing log line.
+
+The 2026-09-04 usage-audit note that one service was crashed and the other missing runtime secrets is **stale**. Both are Online; `richfeed-api` has 27 env vars including `SUPABASE_*`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `FRONTEND_ORIGIN`, and the six platform OAuth sets. Do not dump those values into this file.
 
 ## Data model
 
@@ -133,7 +149,7 @@ apps/api (Fastify)  — requireUser() verifies the JWT via supabase.auth.getUser
    └──▶ Upstash Redis / BullMQ  ──▶  worker process (worker-entry.ts)
                                         │  at scheduled time
                                         ▼
-                                    platform adapters  ← DO NOT EXIST YET
+                                    platform adapters (linkedin, x, youtube, instagram, facebook, threads)
                                         │
                                         ▼
                                     writes post_targets.status + publish_attempts

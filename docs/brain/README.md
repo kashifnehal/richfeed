@@ -8,8 +8,9 @@ without re-deriving everything from git history and old chat threads.
 
 It is **not** application docs. Nothing here is imported by code. If it's about
 *how the running system behaves in detail*, it belongs in code comments or
-`CLAUDE.md`; if it's about *what we're building, why, and how far along we are*,
-it belongs here.
+`AGENTS.md`; if it's about *what we're building, why, and how far along we are*,
+it belongs here. `CLAUDE.md` at the repo root is a deprecated redirect — do not
+put new instructions there.
 
 ## What's in here
 

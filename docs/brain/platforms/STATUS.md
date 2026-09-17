@@ -3,10 +3,9 @@
 Wiring status for every target platform. **Update this whenever a platform's
 status or blocker changes**, as part of that build step's commit.
 
-_Last updated: 2026-09-03 (LinkedIn personal + YouTube are now real
-OAuth+publish, the last two Tier-1 platforms — see `platforms/linkedin.md`,
-`platforms/youtube.md`. All six OAuth routes also moved to a shared
-connect-ticket flow this same step — see `platforms/x.md`)._
+_Last updated: 2026-09-18 (docs cleanup: YouTube upload-401 and X credits-depleted
+blockers written honestly; TikTok/Pinterest marked permanently out of scope.
+Production still on commit `2716e3d` as of the 2026-09-17 Railway check)._
 
 ## Status legend
 
@@ -31,13 +30,13 @@ other real integration exists.
 | Platform | Tier | Status | Blocker | Last updated |
 | --- | --- | --- | --- | --- |
 | linkedin_personal | 1 | **real OAuth+publish live** | none — no review gate; connect + publish (text-only / single-image) both work end to end | 2026-09-03 |
-| twitter (X) | 1 | **real OAuth+publish live** | none — connect + publish (text-only / single-image) both work end to end | 2026-09-03 |
-| youtube | 1 | **real OAuth+publish live** | none technical — Google OAuth app is still in testing/unverified status, capping it to invited test users until Google's verification review passes | 2026-09-03 |
+| twitter (X) | 1 | **real OAuth+publish live** | paused by founder choice — the X Developer API's pay-per-use credits are depleted (`402 credits depleted` on a real attempt). This is a billing decision, not a code bug — do not attempt a code fix | 2026-09-18 |
+| youtube | 1 | **real OAuth+publish live** | OAuth connect flow works (scope bug fixed, commit `a8ce11e`/`2716e3d`), but the actual video-upload call returns a real 401 invalid authentication credentials — a separate, still-open bug (see `AGENTS.md` §5). The Google OAuth app is also still in testing/unverified status pending production verification | 2026-09-18 |
 | instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers | 2026-09-03 |
 | facebook | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | same Meta Development Mode constraint as instagram | 2026-09-03 |
 | threads | 1 (dev-mode) / 2 (production) | **real OAuth+publish live (dev mode)** | Meta Threads App Review needed for production (non-tester) posting | 2026-09-03 |
-| tiktok | 2 | not started | TikTok Content Posting API audit — 2-4+ wks incl. resubmission | 2026-08-29 |
-| pinterest | 2 | not started | Pinterest Standard Access — 3-4+ wks, no official SLA | 2026-08-29 |
+| tiktok | — | **out of scope** | permanent founder decision, not planned | 2026-09-18 |
+| pinterest | — | **out of scope** | permanent founder decision, not planned | 2026-09-18 |
 | linkedin_org (Company Pages) | 3 | not started | LinkedIn Company Page Partner Program — deliberately deferred until Tier-1 is live with real usage to demo | 2026-08-29 |
 | reddit | deferred (low priority) | not started | none technical — API access is trivial; the real constraint is community anti-spam norms | 2026-08-29 |
 

@@ -33,7 +33,7 @@ Four of six real blockers — Meta Advanced Access, TikTok's content-posting aud
 | 3 | Pinterest Standard Access | Public (non-sandboxed) Pins | 3-4+ wks, no official SLA | Not started |
 | 4 | Meta Threads App Review | Production Threads posting for other users | Meta's 2026 guidance: up to ~20 days | Not started |
 | 5 | LinkedIn Company Page Partner Program | Posting to LinkedIn Company Pages (personal-profile posting needs no approval at all) | No official SLA; independent estimates 4-8 wks best case, 3-4 months typical; favors applicants with an already-shipped product | Deliberately deferred — do not start until Tier-1 platforms are live with real usage to demo |
-| 6 | X/Twitter developer account funding | Any X posting (pay-per-use since Feb 2026, no free tier) | 15 minutes, no review | Not started |
+| 6 | X/Twitter developer account funding | Any X posting (pay-per-use since Feb 2026, no free tier) | 15 minutes, no review | Project exists but **credits depleted** (real 402 on publish, 2026-09-04) — billing top-up, not a code fix |
 
 Update the Status column as each moves — this table should always reflect reality, not the original plan.
 

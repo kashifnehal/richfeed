@@ -1,6 +1,6 @@
 ---
 title: RichFeed — Product
-last_updated: 2026-08-28
+last_updated: 2026-09-18
 status: living document — update this file whenever product scope, audience, or priorities change
 ---
 
@@ -8,7 +8,7 @@ status: living document — update this file whenever product scope, audience, o
 
 ## What it is
 
-RichFeed is a social media scheduling and multi-account publishing platform. A user connects social accounts across platforms (LinkedIn, Instagram, Facebook, X/Twitter, YouTube, TikTok, Pinterest, Threads — rolled out platform-by-platform), composes a post once, picks which connected accounts to target, schedules it for an exact date/time, and RichFeed publishes it via each platform's own API at that moment. It tracks publish status per target (scheduled / published / failed / needs-reconnect) and surfaces failures clearly.
+RichFeed is a social media scheduling and multi-account publishing platform. A user connects social accounts across platforms (LinkedIn personal, Instagram, Facebook Pages, X/Twitter, YouTube, Threads — rolled out platform-by-platform), composes a post once, picks which connected accounts to target, schedules it for an exact date/time, and RichFeed publishes it via each platform's own API at that moment. It tracks publish status per target (scheduled / published / failed / needs-reconnect) and surfaces failures clearly.
 
 Same category as Buffer, Hootsuite, Later, Publer, SocialBee, Metricool — a scheduling and publishing tool, not a content-creation tool (users supply finished captions/media), not a social-listening or inbox tool, not an ads/boosting tool.
 
@@ -43,17 +43,18 @@ Content creation/generation (image/video/caption generation); social listening, 
 
 **Tier 1 — build first, low friction:** Instagram + Facebook (Meta, own-account posting), Twitter/X, LinkedIn personal-profile, YouTube, Threads (dev-mode). Either free-and-instant (LinkedIn personal, YouTube's basic flow, Threads dev-mode) or free-with-a-bounded review process (Meta Advanced Access, Threads production).
 
-**Tier 2 — build in parallel, production capability gated by a review process measured in weeks:** Instagram/Facebook multi-tenant (Meta Advanced Access), TikTok Direct Post (content-posting audit), Pinterest Standard Access, Threads production App Review.
+**Tier 2 — production capability gated by a review process measured in weeks:** Instagram/Facebook multi-tenant (Meta Advanced Access), Threads production App Review.
 
 **Tier 3 — genuinely hard, deliberately deferred:** LinkedIn Company Page posting. Partner Program approval structurally favors applicants who already have a shipped product and customers — apply once Tier 1 is live and there's something real to demo, not before.
 
-**Excluded:** Snapchat (no organic posting API exists). **Deferred, low priority:** Reddit (API access is trivial; the real constraint is community anti-spam norms, a messaging problem more than an engineering one).
+**Excluded:** Snapchat (no organic posting API exists). **Permanently out of scope (founder decision):** TikTok and Pinterest — not planned, not a future tier. **Deferred, low priority:** Reddit (API access is trivial; the real constraint is community anti-spam norms, a messaging problem more than an engineering one).
 
 ## Current build status (update this section every step)
 
-- Scheduling engine (data model, encrypted token storage, BullMQ scheduler/worker with a publish stub): live.
-- Real frontend app — every MVP page, real Supabase Auth, real backend routes, zero live platform connections: live.
-- First real platform connection (LinkedIn personal-profile OAuth + publish): see `platforms/STATUS.md` and `platforms/linkedin.md` for current state — don't duplicate that detail here.
-- Everything else (Instagram/Facebook, X, YouTube, TikTok, Pinterest, Threads, LinkedIn Company Pages): not yet wired — see `platforms/STATUS.md`.
+- Product is **live in production** as of commit `2716e3d`: web at `richfeed.social` (Vercel); API + worker on Railway (`richfeed-api` / `richfeed-worker`). Public API: `https://richfeed-api-production.up.railway.app` (`GET /health` 200).
+- Scheduling engine (data model, encrypted token storage, BullMQ scheduler/worker with real enqueue on create/reschedule): live.
+- Real frontend app — every MVP page, real Supabase Auth, real backend routes: live.
+- LinkedIn (personal), X, YouTube, Instagram, Facebook, and Threads all have real OAuth + publish wired. Per-platform status, blockers, and known bugs live in `platforms/STATUS.md` — do not duplicate that detail here.
+- TikTok and Pinterest are permanently out of scope. LinkedIn Company Pages remain deferred.
 
 For exact commit SHAs and what shipped in each step, see `CHANGELOG.md`. For the full page/component spec, see the build-prompt archive (kept in the planning thread, not duplicated here to avoid drift).
