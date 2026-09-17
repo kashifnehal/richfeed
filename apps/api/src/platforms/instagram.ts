@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -19,13 +20,8 @@ const MAX_POLL_ATTEMPTS = 10;
 const CAPTION_MAX_LENGTH = 2200;
 
 function assertSupportedMedia(post: PublishPost): void {
-  // Instagram requires media — there's no pure-text IG post.
-  if (post.mediaType !== "image" && post.mediaType !== "video") {
-    throw new PlatformPublishError(
-      "Instagram posts need an image or video attached — text-only and carousel aren't supported yet.",
-      false,
-    );
-  }
+  const reason = unsupportedMediaReason("instagram", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 async function createContainer(

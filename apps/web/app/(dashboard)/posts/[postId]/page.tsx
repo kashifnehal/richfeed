@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
+import { unsupportedMediaErrorMessage } from "@richfeed/shared";
 import { ConfirmDialog } from "../../../../components/shared/ConfirmDialog";
 import { useToast } from "../../../../components/shared/Toast";
 import { CaptionEditor } from "../../../../components/post/CaptionEditor";
@@ -57,10 +58,24 @@ export default function PostDetailPage() {
 
   const mediaUrls = media.map((m) => m.url);
   const { mediaType, error: mediaError } = deriveMediaType(media);
+  const unpublishedPlatforms = (post?.targets ?? [])
+    .filter((t) => t.status !== "published")
+    .map((t) => t.account?.platform)
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const mediaCapabilityError = unsupportedMediaErrorMessage(unpublishedPlatforms, mediaType);
+  const failedPlatforms = (post?.targets ?? [])
+    .filter((t) => t.status === "failed")
+    .map((t) => t.account?.platform)
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const rescheduleBlockedError = unsupportedMediaErrorMessage(failedPlatforms, post?.mediaType ?? null);
 
   async function handleSaveFields() {
     if (mediaError) {
       showToast(mediaError, "error");
+      return;
+    }
+    if (mediaCapabilityError) {
+      showToast(mediaCapabilityError, "error");
       return;
     }
     setSavingFields(true);
@@ -77,8 +92,8 @@ export default function PostDetailPage() {
       });
       showToast("Changes saved.", "success");
       load();
-    } catch {
-      showToast("Couldn't save changes. Try again.", "error");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't save changes. Try again.", "error");
     } finally {
       setSavingFields(false);
     }
@@ -86,6 +101,10 @@ export default function PostDetailPage() {
 
   async function handleRescheduleFailed(publishAt: string) {
     if (!post) return;
+    if (rescheduleBlockedError) {
+      showToast(rescheduleBlockedError, "error");
+      return;
+    }
     const failed = post.targets.filter((t) => t.status === "failed");
     try {
       await Promise.all(
@@ -98,8 +117,8 @@ export default function PostDetailPage() {
       );
       showToast("Rescheduled.", "success");
       load();
-    } catch {
-      showToast("Couldn't reschedule. Try again.", "error");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't reschedule. Try again.", "error");
     }
   }
 
@@ -124,8 +143,8 @@ export default function PostDetailPage() {
       });
       showToast("Post duplicated.", "success");
       router.push(`/posts/${res.post.id}`);
-    } catch {
-      showToast("Couldn't duplicate this post. Try again.", "error");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't duplicate this post. Try again.", "error");
     }
   }
 
@@ -143,7 +162,11 @@ export default function PostDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-3">
-        <RescheduleDialog failedCount={failedCount} onReschedule={handleRescheduleFailed} />
+        <RescheduleDialog
+          failedCount={failedCount}
+          onReschedule={handleRescheduleFailed}
+          blockedReason={rescheduleBlockedError}
+        />
         <ConfirmDialog
           open={cancelOpen}
           onOpenChange={setCancelOpen}
@@ -161,7 +184,7 @@ export default function PostDetailPage() {
             </button>
           }
         />
-        <DuplicateDialog accounts={accounts} onDuplicate={handleDuplicate} />
+        <DuplicateDialog accounts={accounts} onDuplicate={handleDuplicate} mediaType={post.mediaType} />
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -174,10 +197,14 @@ export default function PostDetailPage() {
               <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
                 {mediaError}
               </p>
+            ) : mediaCapabilityError ? (
+              <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
+                {mediaCapabilityError}
+              </p>
             ) : null}
             <button
               type="button"
-              disabled={savingFields || Boolean(mediaError)}
+              disabled={savingFields || Boolean(mediaError) || Boolean(mediaCapabilityError)}
               onClick={() => void handleSaveFields()}
               className="self-start rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
             >

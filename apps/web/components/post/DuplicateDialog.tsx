@@ -5,7 +5,8 @@ import { Avatar, EmptyState } from "@richfeed/ui";
 import { Copy, X } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactElement, type ReactNode } from "react";
-import type { SocialAccountDto } from "@richfeed/shared";
+import type { MediaType, SocialAccountDto } from "@richfeed/shared";
+import { isMediaSupportedOnPlatform, mediaKindLabel } from "@richfeed/shared";
 import { ScheduleTimePicker } from "./ScheduleTimePicker";
 import { accountStatusLabel } from "../../lib/account-status";
 import { PLATFORM_LABELS, platformToBadge } from "../../lib/platform";
@@ -15,6 +16,8 @@ export interface DuplicateDialogProps {
   onDuplicate: (accountId: string, publishAt: string) => Promise<void>;
   /** Custom trigger (e.g. a compact icon button for a table row). Defaults to a full-width labeled button. */
   trigger?: ReactNode;
+  /** Post media type — accounts that can't take it are shown disabled with a reason. */
+  mediaType?: MediaType | null;
 }
 
 function defaultPublishAt(): string {
@@ -23,7 +26,12 @@ function defaultPublishAt(): string {
   return d.toISOString();
 }
 
-export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDialogProps): ReactElement {
+export function DuplicateDialog({
+  accounts,
+  onDuplicate,
+  trigger,
+  mediaType,
+}: DuplicateDialogProps): ReactElement {
   const [open, setOpen] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [publishAt, setPublishAt] = useState(defaultPublishAt());
@@ -97,11 +105,19 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
             <>
               <div className="mt-4 flex flex-col gap-1.5">
                 {selectableAccounts.map((account) => {
-                  const disabled = account.status === "needs_reconnect";
+                  const reconnectBlocked = account.status === "needs_reconnect";
+                  const mediaBlocked =
+                    mediaType !== undefined && !isMediaSupportedOnPlatform(account.platform, mediaType);
+                  const disabled = reconnectBlocked || mediaBlocked;
+                  const blockedReason = reconnectBlocked
+                    ? "Reconnect this account before duplicating a post to it."
+                    : mediaBlocked
+                      ? `${PLATFORM_LABELS[account.platform]} doesn't support ${mediaKindLabel(mediaType)}.`
+                      : undefined;
                   return (
                     <label
                       key={account.id}
-                      title={disabled ? "Reconnect this account before duplicating a post to it." : undefined}
+                      title={blockedReason}
                       className={`flex items-center gap-3 rounded-control border border-subtle-2 px-3 py-2.5 transition-colors ${
                         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-sidebar-hover"
                       }`}
@@ -124,9 +140,13 @@ export function DuplicateDialog({ accounts, onDuplicate, trigger }: DuplicateDia
                         <span className="text-sm text-primary">
                           {account.displayName ?? PLATFORM_LABELS[account.platform]}
                         </span>
-                        {disabled ? (
+                        {reconnectBlocked ? (
                           <span className="text-xs text-status-needs-reconnect-text">
                             {accountStatusLabel(account.status)}
+                          </span>
+                        ) : mediaBlocked ? (
+                          <span className="text-xs text-status-failed-text">
+                            Doesn&apos;t support {mediaKindLabel(mediaType)}
                           </span>
                         ) : null}
                       </span>

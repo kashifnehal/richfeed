@@ -1,4 +1,4 @@
-import type { Platform, PostTargetStatus, ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
+import type { MediaType, Platform, PostTargetStatus, ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
 
 export interface QueueRowData {
   targetId: string;
@@ -8,6 +8,7 @@ export interface QueueRowData {
   account: SocialAccountDto | null;
   publishAt: string;
   status: PostTargetStatus;
+  mediaType: MediaType | null;
 }
 
 /** Flattens posts-with-targets into one row per target, sorted soonest-first. */
@@ -30,6 +31,7 @@ export function flattenToQueueRows(
         account: target.account,
         publishAt: target.publishAt,
         status: target.status,
+        mediaType: post.mediaType,
       });
     }
   }

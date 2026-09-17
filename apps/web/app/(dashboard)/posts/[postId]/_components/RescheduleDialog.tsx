@@ -8,6 +8,8 @@ import { ScheduleTimePicker } from "../../../../../components/post/ScheduleTimeP
 export interface RescheduleDialogProps {
   failedCount: number;
   onReschedule: (publishAt: string) => Promise<void>;
+  /** When set, reschedule is blocked because the stored media still isn't supported on the failed targets. */
+  blockedReason?: string | null;
 }
 
 function defaultPublishAt(): string {
@@ -17,7 +19,11 @@ function defaultPublishAt(): string {
 }
 
 /** "Fix and reschedule": picks one new time and applies it to every failed target on this post. */
-export function RescheduleDialog({ failedCount, onReschedule }: RescheduleDialogProps): ReactElement {
+export function RescheduleDialog({
+  failedCount,
+  onReschedule,
+  blockedReason,
+}: RescheduleDialogProps): ReactElement {
   const [open, setOpen] = useState(false);
   const [publishAt, setPublishAt] = useState(defaultPublishAt());
   const [submitting, setSubmitting] = useState(false);
@@ -69,13 +75,19 @@ export function RescheduleDialog({ failedCount, onReschedule }: RescheduleDialog
             {failedCount === 1 ? "" : "s"} back to scheduled.
           </Dialog.Description>
 
-          <div className="mt-4">
-            <ScheduleTimePicker value={publishAt} onChange={setPublishAt} />
-          </div>
+          {blockedReason ? (
+            <p className="mt-3 rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
+              {blockedReason}
+            </p>
+          ) : (
+            <div className="mt-4">
+              <ScheduleTimePicker value={publishAt} onChange={setPublishAt} />
+            </div>
+          )}
 
           <button
             type="button"
-            disabled={submitting}
+            disabled={submitting || Boolean(blockedReason)}
             onClick={() => void handleConfirm()}
             className="mt-5 w-full rounded-control bg-accent px-3.5 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
           >

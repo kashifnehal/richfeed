@@ -521,6 +521,23 @@ depleted blockers, and marks TikTok/Pinterest out of scope.
 `apps/api/src/scripts/inspect-target.ts` as a reusable read-only diagnostic
 (post_target row + BullMQ job state for a scheduled post).
 
+## 2026-09-18 — Pre-schedule media-type validation
+
+What shipped: a shared per-platform media capability matrix
+(`packages/shared/src/capabilities.ts`) imported by the API, the web app, and
+the six live adapters' `assertSupportedMedia()` guards — one source of truth,
+so schedule-time rejection cannot drift from publish-time rejection. Save to
+queue / reschedule / duplicate / update now 400 before inserting a
+`post_targets` row or enqueuing a job when the combo is one an adapter would
+reject (video/carousel → LinkedIn/Facebook/Threads/X; non-video → YouTube;
+text-only/carousel → Instagram). Compose blocks Save to queue with the same
+message; incompatible accounts are disabled with a reason as media is
+attached. Instagram video is still *allowed* at schedule time because the
+adapter allows it (the live Meta 400 is a separate publish bug).
+
+Deviations/known gaps: Instagram video and YouTube upload-401 are unchanged.
+Did not add a new platform. No automated test suite (founder decision).
+
 ## Template for future entries
 
 ```

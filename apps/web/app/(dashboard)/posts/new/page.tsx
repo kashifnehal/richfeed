@@ -1,6 +1,7 @@
 "use client";
 
 import type { ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
+import { unsupportedMediaErrorMessage } from "@richfeed/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "../../../../components/shared/Toast";
@@ -10,7 +11,7 @@ import { HashtagInput } from "../../../../components/post/HashtagInput";
 import { MediaUploader } from "../../../../components/post/MediaUploader";
 import { PlatformPreviewCard } from "../../../../components/post/PlatformPreviewCard";
 import { TargetRow } from "../../../../components/post/TargetRow";
-import { apiFetch } from "../../../../lib/api";
+import { apiFetch, ApiError } from "../../../../lib/api";
 import { deriveMediaType, type MediaItem } from "../../../../lib/media";
 
 interface TargetMeta {
@@ -71,6 +72,13 @@ export default function ComposePage() {
 
   const mediaUrls = useMemo(() => media.map((m) => m.url), [media]);
   const { mediaType, error: mediaError } = useMemo(() => deriveMediaType(media), [media]);
+  const mediaCapabilityError = useMemo(
+    () => unsupportedMediaErrorMessage(
+      selectedAccounts.map((a) => a.platform),
+      mediaType,
+    ),
+    [selectedAccounts, mediaType],
+  );
 
   async function handleSave(mode: "queue" | "draft") {
     if (mode === "queue" && selectedIds.length === 0) {
@@ -79,6 +87,10 @@ export default function ComposePage() {
     }
     if (mediaError) {
       setValidationError(mediaError);
+      return;
+    }
+    if (mode === "queue" && mediaCapabilityError) {
+      setValidationError(mediaCapabilityError);
       return;
     }
 
@@ -103,8 +115,8 @@ export default function ComposePage() {
       });
       showToast(mode === "queue" ? "Post saved to queue." : "Draft saved.", "success");
       router.push(`/posts/${post.post.id}`);
-    } catch {
-      showToast("Couldn't save this post. Try again.", "error");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't save this post. Try again.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -135,9 +147,14 @@ export default function ComposePage() {
               accounts={accounts}
               selectedIds={selectedIds}
               onToggle={toggleAccount}
+              mediaType={mediaType}
             />
           )}
-          {validationError ? (
+          {mediaCapabilityError ? (
+            <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
+              {mediaCapabilityError}
+            </p>
+          ) : validationError ? (
             <p className="rounded-control bg-status-failed-bg px-3 py-2 text-sm text-status-failed-text">
               {validationError}
             </p>
@@ -169,7 +186,7 @@ export default function ComposePage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled={submitting}
+            disabled={submitting || Boolean(mediaCapabilityError)}
             onClick={() => void handleSave("queue")}
             className="rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
           >

@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import {
@@ -12,12 +13,8 @@ const POSTS_URL = "https://api.linkedin.com/rest/posts";
 const IMAGES_URL = "https://api.linkedin.com/rest/images?action=initializeUpload";
 
 function assertSupportedMedia(post: PublishPost): void {
-  if (post.mediaType === "video" || post.mediaType === "carousel") {
-    throw new PlatformPublishError(
-      "LinkedIn publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.",
-      false,
-    );
-  }
+  const reason = unsupportedMediaReason("linkedin_personal", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 function linkedinHeaders(accessToken: string): Record<string, string> {

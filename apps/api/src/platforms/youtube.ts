@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt, encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import { updateSocialAccountTokens } from "../db/queries";
@@ -17,9 +18,8 @@ const TITLE_MAX_LENGTH = 100;
 const CATEGORY_ID = "22";
 
 function assertSupportedMedia(post: PublishPost): void {
-  if (post.mediaType !== "video") {
-    throw new PlatformPublishError("YouTube only supports video posts.", false);
-  }
+  const reason = unsupportedMediaReason("youtube", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 function deriveTitle(caption: string | null): string {

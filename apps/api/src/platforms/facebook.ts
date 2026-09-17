@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -11,12 +12,8 @@ import {
 const GRAPH_VERSION = "v21.0";
 
 function assertSupportedMedia(post: PublishPost): void {
-  if (post.mediaType === "video" || post.mediaType === "carousel") {
-    throw new PlatformPublishError(
-      "Facebook Page publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.",
-      false,
-    );
-  }
+  const reason = unsupportedMediaReason("facebook", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 /**

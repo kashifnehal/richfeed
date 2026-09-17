@@ -3,7 +3,7 @@
 The real, current stack and repo layout. Update this whenever structure, stack,
 or system flow changes.
 
-_Last updated: 2026-09-18 (removed stale `apps/web/e2e/` tree line; CLAUDE.md is now a redirect to AGENTS.md)._
+_Last updated: 2026-09-18 (removed stale `apps/web/e2e/` tree line; CLAUDE.md is now a redirect to AGENTS.md; shared media capability matrix)._
 
 ## Stack
 
@@ -17,7 +17,7 @@ _Last updated: 2026-09-18 (removed stale `apps/web/e2e/` tree line; CLAUDE.md is
 | Auth | Supabase Auth (GoTrue), browser-side via `@supabase/ssr` |
 | Storage | Supabase Storage — public `media` bucket, auto-created on first use, uploads proxied through the API with the service-role client (no storage RLS policies needed) |
 | Queue | Upstash Redis + BullMQ (queue in `apps/api/src/queue/`, consumed by the worker) |
-| Validation | Zod schemas in `packages/shared/src/schemas.ts`, shared by API and web |
+| Validation | Zod schemas in `packages/shared/src/schemas.ts`, shared by API and web. Per-platform media capability matrix in `packages/shared/src/capabilities.ts` (schedule-time guard + compose UI; adapters call the same helper). |
 | Token crypto | AES-256-GCM (`apps/api/src/lib/crypto.ts`), `TOKEN_ENCRYPTION_KEY` (64 hex chars) |
 | Design system | `packages/ui` — CSS tokens (`tokens.css`) + Tailwind preset. Hard rule: no hardcoded hex/radius anywhere in `apps/web` |
 | Hosting | **Live.** Frontend on Vercel (`richfeed.social`). API + worker on Railway project `richfeed` (`5ad8a9fa-8579-48dd-a7db-38a4d0ef8a54`), environment `production`. Real hosted Supabase + Upstash. |
@@ -68,7 +68,7 @@ richfeed/
 │   ├── ui/                        tokens.css, tailwind.preset.ts, components/
 │   │                              (Avatar, EmptyState, PlatformBadge, Sidebar,
 │   │                               StatusPill, Topbar)
-│   ├── shared/                    src/{index,schemas,types}.ts  (@richfeed/shared)
+│   ├── shared/                    src/{index,schemas,types,capabilities}.ts  (@richfeed/shared)
 │   └── config/                    shared tsconfig + ESLint config
 ├── supabase/migrations/           0001_init_schema, 0002_workspaces, 0003_notification_preferences
 ├── docs/brain/                    ← this folder

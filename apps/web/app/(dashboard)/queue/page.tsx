@@ -7,7 +7,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Platform, PostTargetStatus, ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
 import { FilterBar } from "../../../components/post/FilterBar";
 import { useToast } from "../../../components/shared/Toast";
-import { apiFetch } from "../../../lib/api";
+import { apiFetch, ApiError } from "../../../lib/api";
 import { PLATFORM_LABELS, platformToBadge } from "../../../lib/platform";
 import { flattenToQueueRows } from "../../../lib/queue-rows";
 import { targetStatusLabel, targetStatusToPill } from "../../../lib/status";
@@ -152,8 +152,8 @@ function QueueContent() {
       });
       showToast("Post duplicated.", "success");
       load();
-    } catch {
-      showToast("Couldn't duplicate this post. Try again.", "error");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Couldn't duplicate this post. Try again.", "error");
     }
   }
 

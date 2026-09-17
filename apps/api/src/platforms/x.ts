@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt, encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import { updateSocialAccountTokens } from "../db/queries";
@@ -13,14 +14,10 @@ const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_TWEETS_URL = "https://api.x.com/2/tweets";
 const X_MEDIA_UPLOAD_URL = "https://api.x.com/2/media/upload";
 
-/** Text-only + single-image only (see doc scope). Video/carousel fail fast, before any network call. */
+/** Text-only + single-image only. Video/carousel fail fast, before any network call. */
 function assertSupportedMedia(post: PublishPost): void {
-  if (post.mediaType === "video" || post.mediaType === "carousel") {
-    throw new PlatformPublishError(
-      "X publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.",
-      false,
-    );
-  }
+  const reason = unsupportedMediaReason("twitter", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 async function extractXError(res: Response): Promise<string> {

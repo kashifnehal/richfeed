@@ -9,8 +9,22 @@ import type {
   SocialAccountDto,
   WorkspaceDto,
 } from "@richfeed/shared";
+import { throwIfUnsupportedMedia } from "@richfeed/shared";
 import { getSupabaseClient } from "./supabase";
 import { enqueuePublishJob, getPublishQueue, publishJobId } from "../queue/scheduler";
+
+async function platformsForAccountIds(userId: string, ids: string[]): Promise<Platform[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await getSupabaseClient()
+    .from("social_accounts")
+    .select("id, platform")
+    .eq("user_id", userId)
+    .in("id", ids);
+  if (error) {
+    throw new DbError(`Failed to look up platforms for social accounts: ${error.message}`, error);
+  }
+  return ((data ?? []) as { platform: Platform }[]).map((row) => row.platform);
+}
 
 /**
  * Typed query layer over the Step-2 schema (supabase/migrations/0001_init_schema.sql).
@@ -687,6 +701,14 @@ export async function createScheduledPostWithTargets(
   userId: string,
   input: CreatePostWithTargetsInput,
 ): Promise<ScheduledPostDto> {
+  if (input.targets.length > 0) {
+    const platforms = await platformsForAccountIds(
+      userId,
+      input.targets.map((t) => t.socialAccountId),
+    );
+    throwIfUnsupportedMedia(platforms, input.mediaType);
+  }
+
   const post = await createScheduledPost(userId, {
     caption: input.caption,
     hashtags: input.hashtags,
@@ -738,6 +760,16 @@ export async function updateScheduledPostFields(
   id: string,
   patch: UpdatePostFieldsInput,
 ): Promise<ScheduledPostDto | null> {
+  if (patch.mediaType !== undefined) {
+    const existing = await getScheduledPostDetail(userId, id);
+    if (!existing) return null;
+    const platforms = existing.targets
+      .filter((t) => t.status !== "published")
+      .map((t) => t.account?.platform)
+      .filter((p): p is Platform => Boolean(p));
+    throwIfUnsupportedMedia(platforms, patch.mediaType);
+  }
+
   const update: Record<string, unknown> = {};
   if (patch.caption !== undefined) update.caption = patch.caption;
   if (patch.hashtags !== undefined) update.hashtags = patch.hashtags;
@@ -765,10 +797,10 @@ export async function updateScheduledPostFields(
 async function getOwnedTarget(
   userId: string,
   targetId: string,
-): Promise<{ id: string; status: string } | null> {
+): Promise<{ id: string; status: string; platform: Platform | null; mediaType: MediaType | null } | null> {
   const { data, error } = await getSupabaseClient()
     .from("post_targets")
-    .select("id, status, scheduled_posts!inner(user_id)")
+    .select("id, status, social_accounts(platform), scheduled_posts!inner(user_id, media_type)")
     .eq("id", targetId)
     .eq("scheduled_posts.user_id", userId)
     .maybeSingle();
@@ -776,7 +808,19 @@ async function getOwnedTarget(
   if (error) {
     throw new DbError(`Failed to look up target ${targetId}: ${error.message}`, error);
   }
-  return data ? { id: data.id as string, status: data.status as string } : null;
+  if (!data) return null;
+
+  const account = data.social_accounts as { platform?: Platform } | { platform?: Platform }[] | null;
+  const accountRow = Array.isArray(account) ? (account[0] ?? null) : account;
+  const post = data.scheduled_posts as { media_type?: MediaType | null } | { media_type?: MediaType | null }[] | null;
+  const postRow = Array.isArray(post) ? (post[0] ?? null) : post;
+
+  return {
+    id: data.id as string,
+    status: data.status as string,
+    platform: accountRow?.platform ?? null,
+    mediaType: postRow?.media_type ?? null,
+  };
 }
 
 export type RescheduleResult =
@@ -791,6 +835,9 @@ export async function rescheduleTarget(
   const target = await getOwnedTarget(userId, targetId);
   if (!target) return { ok: false, reason: "not_found" };
   if (target.status === "published") return { ok: false, reason: "already_published" };
+  if (target.platform) {
+    throwIfUnsupportedMedia([target.platform], target.mediaType);
+  }
 
   const nextStatus = target.status === "failed" ? "pending" : target.status;
 

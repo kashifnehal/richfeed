@@ -1,3 +1,4 @@
+import { unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -19,12 +20,8 @@ const PUBLISH_DELAY_MS = 30_000;
 const TEXT_MAX_LENGTH = 500;
 
 function assertSupportedMedia(post: PublishPost): void {
-  if (post.mediaType === "video" || post.mediaType === "carousel") {
-    throw new PlatformPublishError(
-      "Threads publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.",
-      false,
-    );
-  }
+  const reason = unsupportedMediaReason("threads", post.mediaType);
+  if (reason) throw new PlatformPublishError(reason, false);
 }
 
 export async function publishToThreads(

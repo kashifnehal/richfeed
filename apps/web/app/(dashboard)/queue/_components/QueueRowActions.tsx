@@ -31,6 +31,7 @@ export function QueueRowActions({ row, accounts, onCancel, onDuplicate }: QueueR
 
       <DuplicateDialog
         accounts={accounts}
+        mediaType={row.mediaType}
         onDuplicate={(accountId, publishAt) => onDuplicate(row.postId, accountId, publishAt)}
         trigger={
           <button

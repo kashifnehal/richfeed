@@ -7,6 +7,7 @@ import {
   postTargetStatusSchema,
   type Platform,
   type PostTargetStatus,
+  UnsupportedMediaError,
 } from "@richfeed/shared";
 import { requireUser, sendUnauthorized } from "../lib/auth";
 import {
@@ -42,6 +43,14 @@ function parseNonNegInt(raw: unknown): number | undefined {
   if (raw === undefined) return undefined;
   const n = Number(raw);
   return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
+function sendPostsError(reply: Parameters<typeof sendUnauthorized>[0], err: unknown): void {
+  if (err instanceof UnsupportedMediaError) {
+    reply.code(400).send({ error: err.message });
+    return;
+  }
+  sendUnauthorized(reply, err);
 }
 
 export async function postsRoutes(app: FastifyInstance): Promise<void> {
@@ -125,7 +134,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
       const post = await createScheduledPostWithTargets(user.id, parsed.data);
       return reply.code(201).send({ post });
     } catch (err) {
-      sendUnauthorized(reply, err);
+      sendPostsError(reply, err);
     }
   });
 
@@ -170,7 +179,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
       if (!post) return reply.code(404).send({ error: "Post not found" });
       return { post };
     } catch (err) {
-      sendUnauthorized(reply, err);
+      sendPostsError(reply, err);
     }
   });
 
@@ -194,7 +203,7 @@ export async function postsRoutes(app: FastifyInstance): Promise<void> {
       }
       return reply.code(201).send({ post });
     } catch (err) {
-      sendUnauthorized(reply, err);
+      sendPostsError(reply, err);
     }
   });
 }
