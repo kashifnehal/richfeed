@@ -506,7 +506,7 @@ idle is expected; did not prove a publish job ran today. Did not re-verify
 Vercel. Originally uncommitted; folded into the 2026-09-18 Phase 0 docs
 cleanup commit.
 
-## 2026-09-18 — Phase 0: neutralize stale agent docs; keep inspect-target.ts
+## 2026-09-18 — Phase 0: neutralize stale agent docs; keep inspect-target.ts (commit 1c59f6a)
 
 What shipped: no product-logic changes. `CLAUDE.md` replaced with a short
 redirect to `AGENTS.md` (Cursor was auto-injecting the old "local-only, skip
