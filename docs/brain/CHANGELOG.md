@@ -538,7 +538,7 @@ adapter allows it (the live Meta 400 is a separate publish bug).
 Deviations/known gaps: Instagram video and YouTube upload-401 are unchanged.
 Did not add a new platform. No automated test suite (founder decision).
 
-## 2026-09-18 — Log full Meta/YouTube error bodies (no behavior change)
+## 2026-09-18 — Log full Meta/YouTube error bodies (no behavior change) (commit 5b6eda6)
 
 What shipped: logging only. `buildMetaError` and `throwYouTubeError` now
 write the full API response body to worker logs (tokens/secrets redacted)
