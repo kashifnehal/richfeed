@@ -579,7 +579,7 @@ Deviations/known gaps: did not PATCH the already-published YouTube video
 `1GWekfH9dYE` — edit that title on YouTube if you want it corrected. Future
 publishes after this worker deploy pick up the fallback.
 
-## 2026-09-18 — LinkedIn + Facebook live publish click-through (docs)
+## 2026-09-18 — LinkedIn + Facebook live publish click-through (commit ea40319)
 
 What shipped: no adapter change. Scheduled a real text-only post from
 `richfeed.social` (`8ad4a97e-…`) to LinkedIn personal **Rich Feed** and
