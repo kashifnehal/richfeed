@@ -549,6 +549,21 @@ YouTube-upload 401 can be diagnosed from evidence.
 Deviations/known gaps: no fix for either bug in this commit — waiting on a
 real scheduled video to each platform after this reaches `richfeed-worker`.
 
+## 2026-09-18 — Instagram video: use REELS; YouTube publish verified live
+
+What shipped: diagnosed from a real `richfeed-worker` log on scheduled_post
+`abf0570a-…` ("test 1 mayday"). Instagram 400 body was
+`error_subcode=2207067` — `media_type=VIDEO` is deprecated; use `REELS`.
+`platforms/instagram.ts` now sends `media_type=REELS` + `share_to_feed=true`
+and polls reels longer (30×2s). `buildMetaError` prefers `error_user_msg`
+and no longer treats every `OAuthException` as auth (this 400 had wrongly
+flipped `richfeed_social` to `needs_reconnect` / `AUTH_FAILED`). YouTube
+target on the same post published (`57N_oV8sQC0`) with no adapter change.
+
+Deviations/known gaps: Instagram REELS path is not yet proven with a
+successful publish — that needs a reschedule after this worker deploy. Did
+not "fix" a YouTube 401; it simply did not happen on this attempt.
+
 ## Template for future entries
 
 ```

@@ -77,12 +77,13 @@ rejection.
 
 ## Known caveats
 
-- **Video upload currently fails live** with HTTP 401 "invalid
-  authentication credentials" on the upload-init call — separate from the
-  already-fixed connect-flow scope bug (`a8ce11e`). As of 2026-09-18
-  `throwYouTubeError` logs the full response body (tokens redacted) so the
-  next real attempt can be diagnosed from Railway worker logs. Do not guess
-  a fix without that body.
+- **Video upload 401 not reproduced on 2026-09-18.** A real scheduled
+  video (caption "test 1 mayday", `post_target` `10d283e3-…`) published:
+  `status=published`, `platform_post_id=57N_oV8sQC0`, permalink
+  `https://www.youtube.com/watch?v=57N_oV8sQC0`, confirmed on the live
+  channel. No YouTube adapter change was required for that success. The
+  earlier 401 remains unexplained and is no longer treated as the current
+  live state. Google OAuth app is still in testing/unverified status.
 
 ## Changelog
 
@@ -97,3 +98,10 @@ rejection.
   connected account stores both scopes as separate `scopes` entries. Flow
   (state/cookie handling, connect-ticket pattern, token exchange, token
   encryption) unchanged.
+
+- **2026-09-18 — Real video publish succeeded.** Scheduled post
+  `abf0570a-…` / target `10d283e3-…` → `status=published`,
+  `platform_post_id=57N_oV8sQC0`,
+  `https://www.youtube.com/watch?v=57N_oV8sQC0` (confirmed on the channel).
+  No adapter change. The previously reported upload-init 401 was not
+  reproduced.

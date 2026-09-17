@@ -76,10 +76,10 @@ Instagram (`apps/api/src/platforms/instagram.ts`) uses `GRAPH_HOST = "graph.inst
 ## 5. Currently open, real bugs (as of 2026-09-18)
 
 1. **~~No pre-schedule media-type validation.~~ Fixed 2026-09-18.** Shared matrix in `packages/shared/src/capabilities.ts`; `POST /api/posts` / reschedule / duplicate / update 400 before insert/enqueue; compose UI blocks Save to queue. Instagram video is still allowed at schedule time (the adapter allows it).
-2. **Instagram video posting returns a real 400 "Invalid parameter" from Meta.** Full response body is now logged (2026-09-18, `buildMetaError`) — still waiting on a real post after that logging ships so the rejected field can be read. Do not guess a fix without that body.
-3. **YouTube video upload returns a real 401 "invalid authentication credentials."** Full response body is now logged (2026-09-18, `throwYouTubeError`) — still waiting on a real upload-init failure after that logging ships. Do not guess a fix without that body.
+2. **~~Instagram video 400 "Invalid parameter".~~ Diagnosed 2026-09-18 from a real worker log (`post_target` `6c28f23c-…`): Meta `error_subcode=2207067` — `media_type=VIDEO` is deprecated, use `REELS`. Adapter now sends `REELS` + `share_to_feed=true`. **Not yet verified with a successful Instagram publish** — founder needs to Fix and reschedule after `richfeed-worker` redeploys. Also: that 400 was misclassified as `AUTH_FAILED` (`OAuthException`); `isMetaAuthError` now only treats 401/403 / code 190 as auth.
+3. **~~YouTube video upload 401.~~ Not reproduced on 2026-09-18.** Real post `10d283e3-…` published (`platform_post_id=57N_oV8sQC0`, live on the channel). No YouTube adapter change. Earlier 401 unexplained; not the current live state.
 
-#2 and #3 still need actual error-body evidence before attempting a fix.
+Google OAuth app is still in testing/unverified status. Meta app is still in Development Mode.
 
 ## 6. House rules (non-negotiable — each one exists because of a real incident)
 

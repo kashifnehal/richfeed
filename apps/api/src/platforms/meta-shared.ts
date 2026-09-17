@@ -4,17 +4,26 @@ import { logPlatformApiError, readResponseBody } from "../lib/log-platform-error
 /**
  * Shared helpers for the Meta Graph API family (Facebook Pages, Instagram,
  * Threads) — unlike X's REST API, a Graph API auth failure often comes back
- * as HTTP 400 with `error.code === 190` / `error.type === "OAuthException"`
- * in the body, not a plain 401/403. Every Meta-family adapter should build
- * its thrown error through here rather than checking res.status alone.
+ * as HTTP 400 with `error.code === 190` in the body, not a plain 401/403.
+ * `type: OAuthException` is not sufficient on its own (Meta also uses it for
+ * parameter errors). Every Meta-family adapter should build its thrown error
+ * through here rather than checking res.status alone.
  */
 
 interface MetaErrorBody {
-  error?: { message?: string; type?: string; code?: number };
+  error?: {
+    message?: string;
+    type?: string;
+    code?: number;
+    error_subcode?: number;
+    error_user_msg?: string;
+    error_user_title?: string;
+  };
 }
 
+/** Auth failures are 401/403, or Graph code 190. `type: OAuthException` alone is too broad — Meta also uses it for parameter errors (e.g. code 100). */
 function isMetaAuthError(status: number, body: MetaErrorBody): boolean {
-  return status === 401 || status === 403 || body.error?.code === 190 || body.error?.type === "OAuthException";
+  return status === 401 || status === 403 || body.error?.code === 190;
 }
 
 /** Builds (does not throw) the PlatformPublishError for a non-2xx Graph API response — `throw await buildMetaError(res)` at the call site. */
@@ -24,6 +33,7 @@ export async function buildMetaError(res: Response): Promise<PlatformPublishErro
 
   const body: MetaErrorBody =
     parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as MetaErrorBody) : {};
-  const message = body.error?.message ?? `Graph API error (${res.status})`;
+  const message =
+    body.error?.error_user_msg ?? body.error?.message ?? `Graph API error (${res.status})`;
   return new PlatformPublishError(message, isMetaAuthError(res.status, body), res.status);
 }

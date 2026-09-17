@@ -54,7 +54,9 @@ returning unexpected errors, since Meta's docs for this specific product
 line have moved before).
 
 1. `POST /{ig-user-id}/media` — `image_url` or (`video_url` +
-   `media_type=VIDEO`) + `caption` (truncated to 2,200 chars) → `{id: <container-id>}`.
+   `media_type=REELS` + `share_to_feed=true`) + `caption` (truncated to 2,200
+   chars) → `{id: <container-id>}`. `media_type=VIDEO` is rejected live by
+   Meta (error_subcode 2207067, 2026-09-17).
 2. Poll `GET /{container-id}?fields=status_code` until `FINISHED` (or
    `ERROR`/`EXPIRED`, which fails the target with a clear message) — images
    are near-instant but this polls at least once regardless, per spec,
@@ -74,9 +76,10 @@ client-side).
 ## `needs_reconnect` trigger condition
 
 Same as every Meta-family adapter — see `platforms/meta-shared.ts`'s
-`buildMetaError`: a Graph API auth failure often comes back as HTTP 400 with
-`error.code === 190` / `error.type === "OAuthException"`, not a plain
-401/403, so the auth-failure check looks at both.
+`buildMetaError`: a Graph API auth failure is HTTP 401/403 **or** body
+`error.code === 190`. `type: OAuthException` alone is not enough — Meta
+also uses that type for parameter errors (code 100), which must not flip
+the account to `needs_reconnect`.
 
 ## Known caveats
 
@@ -90,8 +93,14 @@ Same as every Meta-family adapter — see `platforms/meta-shared.ts`'s
   account) where one Instagram login surfaces multiple connectable
   accounts — the "no picker needed" assumption is unverified against a real
   multi-account scenario.
-- **Video publish currently fails live** with Meta HTTP 400 "Invalid
-  parameter". Root cause unknown. As of 2026-09-18 `buildMetaError` logs the
-  full Graph API response body (tokens redacted) so the next real video
-  attempt can be diagnosed from Railway worker logs. Do not guess a fix
-  without that body.
+- **Video publish 400 (fixed 2026-09-18).** Live worker log on
+  `post_target` `6c28f23c-…` (scheduled_post `abf0570a-…`, caption "test 1
+  mayday"): Meta returned HTTP 400 `error.code=100` `error_subcode=2207067`
+  `error_user_title="Unsupported media type VIDEO"` —
+  "The VIDEO value for media_type is deprecated. Use the REELS media type
+  to publish a video to your Instagram feed." Adapter now sends
+  `media_type=REELS` + `share_to_feed=true`. Confirmed from the real
+  response body, not guessed. The same 400 was wrongly classified as
+  `AUTH_FAILED` (because `type` was `OAuthException`) and flipped
+  `richfeed_social` to `needs_reconnect`; `isMetaAuthError` now only treats
+  401/403 / code 190 as auth.

@@ -16,7 +16,10 @@ import {
 const GRAPH_HOST = "graph.instagram.com";
 const GRAPH_VERSION = "v21.0";
 const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 10;
+const IMAGE_POLL_ATTEMPTS = 10;
+// Reels processing is slower than images; 20s was enough to *create* a
+// container but not always enough to reach FINISHED.
+const VIDEO_POLL_ATTEMPTS = 30;
 const CAPTION_MAX_LENGTH = 2200;
 
 function assertSupportedMedia(post: PublishPost): void {
@@ -35,8 +38,12 @@ async function createContainer(
     caption: caption.slice(0, CAPTION_MAX_LENGTH),
   });
   if (post.mediaType === "video") {
-    body.set("media_type", "VIDEO");
+    // Meta deprecated media_type=VIDEO (error_subcode 2207067, 2026-09-17 live
+    // 400). Reels are the replacement; share_to_feed=true keeps it eligible
+    // for the main feed as well as the Reels tab.
+    body.set("media_type", "REELS");
     body.set("video_url", post.mediaUrls![0]!);
+    body.set("share_to_feed", "true");
   } else {
     body.set("image_url", post.mediaUrls![0]!);
   }
@@ -52,9 +59,13 @@ async function createContainer(
   return data.id;
 }
 
-/** Images are near-instant; video needs real processing time. Poll either way rather than assuming. */
-async function waitForContainerReady(containerId: string, accessToken: string): Promise<void> {
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+/** Images are near-instant; reels need real processing time. Poll either way rather than assuming. */
+async function waitForContainerReady(
+  containerId: string,
+  accessToken: string,
+  maxAttempts: number,
+): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const res = await fetch(
       `https://${GRAPH_HOST}/${GRAPH_VERSION}/${containerId}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`,
     );
@@ -81,7 +92,11 @@ export async function publishToInstagram(
   const caption = target.platformCaptionOverride ?? post.caption ?? "";
 
   const containerId = await createContainer(account.platformAccountId, accessToken, post, caption);
-  await waitForContainerReady(containerId, accessToken);
+  await waitForContainerReady(
+    containerId,
+    accessToken,
+    post.mediaType === "video" ? VIDEO_POLL_ATTEMPTS : IMAGE_POLL_ATTEMPTS,
+  );
 
   const publishRes = await fetch(`https://${GRAPH_HOST}/${GRAPH_VERSION}/${account.platformAccountId}/media_publish`, {
     method: "POST",

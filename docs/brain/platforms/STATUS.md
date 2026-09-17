@@ -3,9 +3,9 @@
 Wiring status for every target platform. **Update this whenever a platform's
 status or blocker changes**, as part of that build step's commit.
 
-_Last updated: 2026-09-18 (docs cleanup: YouTube upload-401 and X credits-depleted
-blockers written honestly; TikTok/Pinterest marked permanently out of scope.
-Production still on commit `2716e3d` as of the 2026-09-17 Railway check)._
+_Last updated: 2026-09-18 (Instagram video 400 diagnosed as deprecated
+`media_type=VIDEO` → `REELS`; YouTube video publish verified live on
+`57N_oV8sQC0`)._
 
 ## Status legend
 
@@ -31,8 +31,8 @@ other real integration exists.
 | --- | --- | --- | --- | --- |
 | linkedin_personal | 1 | **real OAuth+publish live** | none — no review gate; connect + publish (text-only / single-image) both work end to end | 2026-09-03 |
 | twitter (X) | 1 | **real OAuth+publish live** | paused by founder choice — the X Developer API's pay-per-use credits are depleted (`402 credits depleted` on a real attempt). This is a billing decision, not a code bug — do not attempt a code fix | 2026-09-18 |
-| youtube | 1 | **real OAuth+publish live** | OAuth connect flow works (scope bug fixed, commit `a8ce11e`/`2716e3d`), but the actual video-upload call returns a real 401 invalid authentication credentials — a separate, still-open bug (see `AGENTS.md` §5). The Google OAuth app is also still in testing/unverified status pending production verification | 2026-09-18 |
-| instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers | 2026-09-03 |
+| youtube | 1 | **real OAuth+publish live** | none technical on the last live upload (2026-09-18: `platform_post_id=57N_oV8sQC0`, permalink confirmed on the channel). Google OAuth app is still in testing/unverified status, capping it to invited test users until verification review passes | 2026-09-18 |
+| instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers. Video: `media_type=VIDEO` was rejected live (subcode 2207067); adapter now sends `REELS` (not yet re-verified with a successful publish) | 2026-09-18 |
 | facebook | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | same Meta Development Mode constraint as instagram | 2026-09-03 |
 | threads | 1 (dev-mode) / 2 (production) | **real OAuth+publish live (dev mode)** | Meta Threads App Review needed for production (non-tester) posting | 2026-09-03 |
 | tiktok | — | **out of scope** | permanent founder decision, not planned | 2026-09-18 |
