@@ -597,7 +597,7 @@ Instagram login in the OAuth window. Facebook picker was opened and
 showed the real **RichFeed** Page; confirm was not clicked. Did not PATCH
 YouTube `1GWekfH9dYE` title.
 
-## 2026-09-18 — Threads first live connect + text publish (docs)
+## 2026-09-18 — Threads first live connect + text publish (commit 1e22185)
 
 What shipped: no adapter change. Founder completed Threads OAuth;
 `social_accounts` stores real Graph identity (`28901533789454916` /
