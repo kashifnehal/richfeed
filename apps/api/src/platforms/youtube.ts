@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt, encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import { logPlatformApiError, readResponseBody } from "../lib/log-platform-error";
@@ -91,7 +91,7 @@ export async function publishToYouTube(
   }
 
   const accessToken = await getValidAccessToken(account);
-  const caption = target.platformCaptionOverride ?? post.caption ?? "";
+  const caption = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
   const description = [caption, post.hashtags?.join(" ")].filter(Boolean).join("\n\n");
 
   const videoRes = await fetch(post.mediaUrls[0]!);

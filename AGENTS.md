@@ -75,9 +75,12 @@ Instagram (`apps/api/src/platforms/instagram.ts`) uses `GRAPH_HOST = "graph.inst
 
 ## 5. Currently open, real bugs (as of 2026-09-18)
 
+None of the three original publish bugs are still open. Struck-through history below. Remaining non-code constraints: Google OAuth app is still in testing/unverified status; Meta app is still in Development Mode; X is paused by founder billing choice (`402 credits depleted`).
+
 1. **~~No pre-schedule media-type validation.~~ Fixed 2026-09-18.** Shared matrix in `packages/shared/src/capabilities.ts`; `POST /api/posts` / reschedule / duplicate / update 400 before insert/enqueue; compose UI blocks Save to queue. Instagram video is still allowed at schedule time (the adapter allows it).
-2. **~~Instagram video 400 "Invalid parameter".~~ Diagnosed 2026-09-18 from a real worker log (`post_target` `6c28f23c-…`): Meta `error_subcode=2207067` — `media_type=VIDEO` is deprecated, use `REELS`. Adapter now sends `REELS` + `share_to_feed=true`. **Not yet verified with a successful Instagram publish** — founder needs to Fix and reschedule after `richfeed-worker` redeploys. Also: that 400 was misclassified as `AUTH_FAILED` (`OAuthException`); `isMetaAuthError` now only treats 401/403 / code 190 as auth.
+2. **~~Instagram video 400 "Invalid parameter".~~ Diagnosed and verified 2026-09-18.** Worker log on `6c28f23c-…`: Meta `error_subcode=2207067` — `media_type=VIDEO` is deprecated, use `REELS`. Adapter now sends `REELS` + `share_to_feed=true`. **Live verified** on post `e81f5bdd-…` / target `36dbcf47-…` → Reel `https://www.instagram.com/reel/DdZpBMmFABj/` (`platform_post_id=17980625222904328`). That 400 had also been misclassified as `AUTH_FAILED` (`OAuthException`); `isMetaAuthError` now only treats 401/403 / code 190 as auth.
 3. **~~YouTube video upload 401.~~ Not reproduced on 2026-09-18.** Real post `10d283e3-…` published (`platform_post_id=57N_oV8sQC0`, live on the channel). No YouTube adapter change. Earlier 401 unexplained; not the current live state.
+4. **~~YouTube title "Untitled" from empty caption override.~~ Fixed 2026-09-18.** Post `e81f5bdd-…` / target `9ea4ceb4-…` published `1GWekfH9dYE` with oEmbed title `"Untitled"` because `platform_caption_override=""`. `resolvePlatformCaption` + Zod/insert now treat whitespace-only override as unset. The already-published video was not patched.
 
 Google OAuth app is still in testing/unverified status. Meta app is still in Development Mode.
 

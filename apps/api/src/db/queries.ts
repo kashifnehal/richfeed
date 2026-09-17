@@ -125,7 +125,7 @@ export async function addPostTarget(
       scheduled_post_id: scheduledPostId,
       social_account_id: socialAccountId,
       publish_at: publishAt.toISOString(),
-      platform_caption_override: captionOverride ?? null,
+      platform_caption_override: captionOverride?.trim() ? captionOverride : null,
     })
     .select()
     .single();
@@ -724,7 +724,7 @@ export async function createScheduledPostWithTargets(
           scheduled_post_id: post.id,
           social_account_id: t.socialAccountId,
           publish_at: t.publishAt,
-          platform_caption_override: t.captionOverride ?? null,
+          platform_caption_override: t.captionOverride?.trim() ? t.captionOverride : null,
         })),
       )
       .select("id, publish_at");

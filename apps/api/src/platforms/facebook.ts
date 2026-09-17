@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -31,7 +31,7 @@ export async function publishToFacebook(
   assertSupportedMedia(post);
 
   const pageAccessToken = decrypt(account.accessToken);
-  const message = target.platformCaptionOverride ?? post.caption ?? "";
+  const message = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
   const isPhoto = post.mediaType === "image" && !!post.mediaUrls && post.mediaUrls.length > 0;
 
   const url = isPhoto

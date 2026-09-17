@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -89,7 +89,7 @@ export async function publishToInstagram(
   assertSupportedMedia(post);
 
   const accessToken = decrypt(account.accessToken);
-  const caption = target.platformCaptionOverride ?? post.caption ?? "";
+  const caption = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
 
   const containerId = await createContainer(account.platformAccountId, accessToken, post, caption);
   await waitForContainerReady(

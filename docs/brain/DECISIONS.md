@@ -243,3 +243,15 @@ kind has been written yet, the worker's publish step is still a stub, and
 `SUPABASE_*`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `DATABASE_URL`).
 Reality wins: `platforms/STATUS.md` and `platforms/linkedin.md` reflect the
 not-started state.
+
+## 2026-09-18 — Empty per-target caption override means "not set", not a blank caption
+
+Compose's "Customize for {platform}" checkbox writes `""` when checked and
+the override field is empty. Previews already used `override || caption`
+(empty shows the main caption), but adapters used `override ?? caption`, so
+YouTube titled a real video `"Untitled"` (`1GWekfH9dYE`) while Instagram on
+the same post used `"test 2 : same thread"`. Decision: whitespace-only
+`platform_caption_override` is unset. Shared helper
+`resolvePlatformCaption` is the single fallback; API Zod + insert coerce
+`""` to `null`. There is no product path for publishing a deliberately
+blank platform caption.

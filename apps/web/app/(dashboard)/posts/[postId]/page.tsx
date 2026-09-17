@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
-import { unsupportedMediaErrorMessage } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaErrorMessage } from "@richfeed/shared";
 import { ConfirmDialog } from "../../../../components/shared/ConfirmDialog";
 import { useToast } from "../../../../components/shared/Toast";
 import { CaptionEditor } from "../../../../components/post/CaptionEditor";
@@ -286,7 +286,7 @@ export default function PostDetailPage() {
                   <PlatformPreviewCard
                     key={target.id}
                     account={target.account}
-                    caption={target.platformCaptionOverride || caption}
+                    caption={resolvePlatformCaption(target.platformCaptionOverride, caption)}
                     hashtags={hashtags}
                     mediaUrls={mediaUrls}
                   />

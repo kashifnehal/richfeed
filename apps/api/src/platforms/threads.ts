@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { buildMetaError } from "./meta-shared";
 import {
@@ -32,7 +32,7 @@ export async function publishToThreads(
   assertSupportedMedia(post);
 
   const accessToken = decrypt(account.accessToken);
-  const text = (target.platformCaptionOverride ?? post.caption ?? "").slice(0, TEXT_MAX_LENGTH);
+  const text = resolvePlatformCaption(target.platformCaptionOverride, post.caption).slice(0, TEXT_MAX_LENGTH);
 
   const body = new URLSearchParams({ access_token: accessToken, text });
   if (post.mediaType === "image" && post.mediaUrls && post.mediaUrls.length > 0) {

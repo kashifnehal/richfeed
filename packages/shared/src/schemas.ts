@@ -51,7 +51,15 @@ export type PatchAccountBody = z.infer<typeof patchAccountBodySchema>;
 export const postTargetInputSchema = z.object({
   socialAccountId: z.string().uuid(),
   publishAt: z.string().datetime({ offset: true }),
-  captionOverride: z.string().max(10000).nullable().optional(),
+  captionOverride: z
+    .string()
+    .max(10000)
+    .nullable()
+    .optional()
+    .transform((v) => {
+      const trimmed = v?.trim() ?? "";
+      return trimmed.length > 0 ? trimmed : null;
+    }),
 });
 export type PostTargetInput = z.infer<typeof postTargetInputSchema>;
 

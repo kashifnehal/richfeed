@@ -104,3 +104,10 @@ the account to `needs_reconnect`.
   `AUTH_FAILED` (because `type` was `OAuthException`) and flipped
   `richfeed_social` to `needs_reconnect`; `isMetaAuthError` now only treats
   401/403 / code 190 as auth.
+- **Video publish verified live 2026-09-18.** Scheduled post `e81f5bdd-…`
+  (caption "test 2 : same thread") / Instagram target `36dbcf47-…` →
+  `status=published`, `platform_post_id=17980625222904328`, permalink
+  `https://www.instagram.com/reel/DdZpBMmFABj/`. `platform_caption_override`
+  was `null`, so the Reel used the post caption. Same post's YouTube target
+  also published (see `platforms/youtube.md` — title was wrong for a
+  different reason).

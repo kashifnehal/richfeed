@@ -564,6 +564,21 @@ Deviations/known gaps: Instagram REELS path is not yet proven with a
 successful publish — that needs a reschedule after this worker deploy. Did
 not "fix" a YouTube 401; it simply did not happen on this attempt.
 
+## 2026-09-18 — Instagram REELS verified; blank caption override no longer wins
+
+What shipped: the 01:10 AM video (`e81f5bdd-…`) published on both platforms.
+Instagram target `36dbcf47-…` is a live Reel
+(`https://www.instagram.com/reel/DdZpBMmFABj/`). YouTube target `9ea4ceb4-…`
+published `1GWekfH9dYE` but titled "Untitled" because compose's "Customize
+for YouTube" checkbox stores `platform_caption_override=""`, and `??` does
+not fall through. Shared `resolvePlatformCaption` now treats whitespace-only
+override as unset; Zod + insert coerce `""` to `null`; all six adapters use
+the helper. Compose also sends trimmed-empty override as `null`.
+
+Deviations/known gaps: did not PATCH the already-published YouTube video
+`1GWekfH9dYE` — edit that title on YouTube if you want it corrected. Future
+publishes after this worker deploy pick up the fallback.
+
 ## Template for future entries
 
 ```

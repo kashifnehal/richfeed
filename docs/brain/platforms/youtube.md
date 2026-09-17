@@ -57,7 +57,9 @@ rejection.
   headers `X-Upload-Content-Length` / `X-Upload-Content-Type`, JSON body
   `{ snippet: { title, description, categoryId: "22" }, status: {
   privacyStatus: "private", publishAt } }`. `title` is derived from the
-  caption's first line, truncated to 100 chars; `description` is caption +
+  caption's first line, truncated to 100 chars (`resolvePlatformCaption`
+  first: a blank per-target override falls back to the post caption; an
+  empty first line still becomes `"Untitled"`); `description` is caption +
   hashtags joined (added `hashtags` to the shared `PublishPost` adapter
   type for this — the only adapter that needed it so far).
   **`privacyStatus` MUST be `"private"`** (not `"unlisted"`) for
@@ -84,6 +86,18 @@ rejection.
   channel. No YouTube adapter change was required for that success. The
   earlier 401 remains unexplained and is no longer treated as the current
   live state. Google OAuth app is still in testing/unverified status.
+- **Empty caption override became title "Untitled" (fixed 2026-09-18).**
+  Scheduled post `e81f5bdd-…` (caption "test 2 : same thread") / YouTube
+  target `9ea4ceb4-…` published `1GWekfH9dYE`
+  (`https://www.youtube.com/watch?v=1GWekfH9dYE`). Live oEmbed title was
+  `"Untitled"`. DB had `platform_caption_override=""` (compose
+  "Customize for YouTube" checkbox writes empty string). Adapters used
+  `override ?? caption`, and `""` is not nullish, so `deriveTitle("")`
+  returned `"Untitled"`. Instagram on the same post had override `null`
+  and used the real caption. Fix: `resolvePlatformCaption` treats
+  whitespace-only override as unset; Zod + insert coerce `""` to `null`.
+  **The already-published `1GWekfH9dYE` was not patched** — edit that
+  title on YouTube if you want it corrected.
 
 ## Changelog
 
@@ -105,3 +119,8 @@ rejection.
   `https://www.youtube.com/watch?v=57N_oV8sQC0` (confirmed on the channel).
   No adapter change. The previously reported upload-init 401 was not
   reproduced.
+
+- **2026-09-18 — Second video published with title "Untitled".** Scheduled
+  post `e81f5bdd-…` / target `9ea4ceb4-…` → `1GWekfH9dYE`. Cause was an
+  empty `platform_caption_override`, not a YouTube API failure. See Known
+  caveats. Adapters now fall back to the post caption.

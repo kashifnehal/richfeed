@@ -13,3 +13,4 @@ export type {
 
 export * from "./schemas";
 export * from "./capabilities";
+export * from "./caption";

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ScheduledPostDto, SocialAccountDto } from "@richfeed/shared";
-import { unsupportedMediaErrorMessage } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaErrorMessage } from "@richfeed/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "../../../../components/shared/Toast";
@@ -108,7 +108,7 @@ export default function ComposePage() {
               ? selectedIds.map((id) => ({
                   socialAccountId: id,
                   publishAt: targetMeta[id]!.publishAt,
-                  captionOverride: targetMeta[id]!.captionOverride,
+                  captionOverride: targetMeta[id]!.captionOverride?.trim() || null,
                 }))
               : [],
         }),
@@ -215,7 +215,7 @@ export default function ComposePage() {
               <PlatformPreviewCard
                 key={account.id}
                 account={account}
-                caption={targetMeta[account.id]?.captionOverride || caption}
+                caption={resolvePlatformCaption(targetMeta[account.id]?.captionOverride, caption)}
                 hashtags={hashtags}
                 mediaUrls={mediaUrls}
               />

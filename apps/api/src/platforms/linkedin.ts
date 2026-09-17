@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import {
@@ -78,7 +78,7 @@ export async function publishToLinkedIn(
   // token just needs a real reconnect (401/403 below).
   const accessToken = decrypt(account.accessToken);
   const authorUrn = `urn:li:person:${account.platformAccountId}`;
-  const commentary = target.platformCaptionOverride ?? post.caption ?? "";
+  const commentary = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
 
   let imageUrn: string | undefined;
   if (post.mediaType === "image" && post.mediaUrls && post.mediaUrls.length > 0) {

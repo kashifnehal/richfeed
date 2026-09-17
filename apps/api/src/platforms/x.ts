@@ -1,4 +1,4 @@
-import { unsupportedMediaReason } from "@richfeed/shared";
+import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt, encrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
 import { updateSocialAccountTokens } from "../db/queries";
@@ -125,7 +125,7 @@ export async function publishToX(
   assertSupportedMedia(post);
 
   const accessToken = await getValidAccessToken(account);
-  const text = target.platformCaptionOverride ?? post.caption ?? "";
+  const text = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
 
   let mediaId: string | undefined;
   if (post.mediaType === "image" && post.mediaUrls && post.mediaUrls.length > 0) {
