@@ -564,7 +564,7 @@ Deviations/known gaps: Instagram REELS path is not yet proven with a
 successful publish — that needs a reschedule after this worker deploy. Did
 not "fix" a YouTube 401; it simply did not happen on this attempt.
 
-## 2026-09-18 — Instagram REELS verified; blank caption override no longer wins
+## 2026-09-18 — Instagram REELS verified; blank caption override no longer wins (commit 69a0f5a)
 
 What shipped: the 01:10 AM video (`e81f5bdd-…`) published on both platforms.
 Instagram target `36dbcf47-…` is a live Reel
