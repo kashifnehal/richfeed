@@ -25,9 +25,14 @@ Text-only or single-image. Video and carousel fail immediately
 - **Identity**: `GET https://graph.threads.net/v1.0/me?fields=id,username` —
   **not in the original build spec**, added because `platform_account_id`
   and `display_name` need to come from somewhere and every other platform's
-  OAuth route has an equivalent identity call. Worth double-checking this
-  exact endpoint shape against Meta's Threads API docs on first real
-  connect.
+  OAuth route has an equivalent identity call. **Verified 2026-09-18** on
+  first real connect: Graph returned `id=28901533789454916`,
+  `username=richfeed_social`, `name` absent/null. Stored row
+  (`social_accounts.id` `2fba13ce-…`, user `080faeb1-…`):
+  `platform_account_id` and `platform_username`/`display_name` match those
+  Graph fields; scopes `threads_basic,threads_content_publish`;
+  `token_expires_at` ~60 days out (`2026-11-16`). Endpoint shape is
+  correct.
 - **Session boundary**: same connect-ticket flow as every other platform
   now — see `platforms/x.md`'s "session-boundary problem" writeup.
 - **Env vars**: `THREADS_APP_ID`, `THREADS_APP_SECRET`, `THREADS_REDIRECT_URI`.
@@ -64,19 +69,32 @@ section above. The right shape is probably a scheduled job re-exchanging any
 Threads token within N days of `token_expires_at`, but building that job is
 explicitly out of scope for this step.
 
-## First live connect (2026-09-18) — not completed
+## First live connect + publish (2026-09-18)
 
-No `social_accounts` row with `platform='threads'` exists yet (confirmed
-in production Postgres). Connect from `richfeed.social` did start the
-real flow: connect-ticket → `GET /api/oauth/threads/start` →
-`https://threads.net/oauth/authorize` (browser landed on
-`threads.com/login?next=…/oauth/authorize` with `client_id`,
-`redirect_uri=https://richfeed-api-production.up.railway.app/api/oauth/threads/callback`,
-`scope=threads_basic,threads_content_publish`, `response_type=code`,
-CSRF `state`). That is Instagram-account login, separate from the
-Facebook session already present in the same browser. Login was not
-completed, so identity (`GET graph.threads.net/v1.0/me?fields=id,username`)
-and a first publish were not exercised. Next pass: finish Instagram
-login in that OAuth window (OAuth cookies are 10 minutes), then confirm
-the new `social_accounts` row's `platform_account_id` / `platform_username`
-are real before scheduling.
+Founder completed Threads OAuth in their own browser (Instagram login
+never passed to the agent). Production row:
+
+- `social_accounts.id` `2fba13ce-d2a8-40e2-ae8e-34452f676ee4`
+- `platform_account_id=28901533789454916`
+- `platform_username` / `display_name=richfeed_social`
+- `status=connected`, `connected_at=2026-09-17 20:55:54Z`
+
+Text-only post from `richfeed.social` (`scheduled_posts` `f221b889-…`,
+caption "RichFeed live publish check — Threads, 18 Sep 2026.
+Reliability over features.", `publish_at` 21:01Z):
+
+- `post_targets.id` `d9f0ca9a-…`
+- `status=published` at 21:04:01Z (jitter + 30s container delay)
+- `platform_post_id=18112795760325453`
+- `permalink_url=https://www.threads.com/@richfeed_social/post/DdZyCi_AaHY`
+  (present — not a copyright-omit case)
+- `publish_attempts` #1 `http_status=201`
+- worker log: `job d9f0ca9a-… completed` at 21:04:11Z
+
+Graph `GET /{id}?fields=id,text,permalink,timestamp,username,media_type`
+with the stored token: HTTP 200, `text` matches caption,
+`username=richfeed_social`, `media_type=TEXT_POST`, same permalink.
+Opened that URL without a Threads login: page title and thread body
+show the caption on `@richfeed_social`, posted ~4 minutes earlier.
+Anonymous curl of the same URL is 200 but JS-rendered (title "Threads")
+— use Graph or a real browser, not raw curl, to read the body.

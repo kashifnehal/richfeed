@@ -597,6 +597,20 @@ Instagram login in the OAuth window. Facebook picker was opened and
 showed the real **RichFeed** Page; confirm was not clicked. Did not PATCH
 YouTube `1GWekfH9dYE` title.
 
+## 2026-09-18 — Threads first live connect + text publish (docs)
+
+What shipped: no adapter change. Founder completed Threads OAuth;
+`social_accounts` stores real Graph identity (`28901533789454916` /
+`richfeed_social`). Scheduled text-only post `f221b889-…` from
+`richfeed.social` published (`post_target` `d9f0ca9a-…`,
+`platform_post_id=18112795760325453`, permalink
+`https://www.threads.com/@richfeed_social/post/DdZyCi_AaHY`). Graph GET
+and the live thread both show the caption. Permalink was present (not
+a copyright-omit case).
+
+Deviations/known gaps: none for this step. 60-day token refresh job
+still not built.
+
 ## Template for future entries
 
 ```
