@@ -7,8 +7,13 @@ both Facebook Login for Business and Instagram Login.
 
 ## Scope
 
-Text-only or single-image. Video and carousel fail immediately
-(`assertSupportedMedia`), same pattern as every other adapter.
+Text-only, single-image, and carousel (2–20 image children). Video still
+fails immediately (`assertSupportedMedia`). Threads' carousel field names
+are close to Instagram's but not identical: children use `media_type=IMAGE`
++ `is_carousel_item=true` on `POST /{id}/threads`; the parent uses
+`media_type=CAROUSEL` + `children` + `text` (not `caption`); publish is
+still `/threads_publish` after the existing 30s wait. Confirmed against
+Meta's Threads Posts docs 2026-09-18.
 
 ## OAuth
 
@@ -51,6 +56,14 @@ Text-only or single-image. Video and carousel fail immediately
 4. `GET /{media-id}?fields=permalink` — **best-effort**, handled gracefully
    if absent (Meta's own docs note a copyright-flagged post may omit it) —
    a missing permalink doesn't fail an otherwise-successful publish.
+
+Carousel (image-only children, 2–20): create each child with
+`media_type=IMAGE` + `image_url` + `is_carousel_item=true` (no `text` on
+children), then the parent with `media_type=CAROUSEL` + `children` +
+`text`, then the same 30s wait and `/threads_publish` on the parent.
+Meta allows mixed image/video children; compose still rejects mixed so
+this path is images only. Host remains `graph.threads.net` (not
+`graph.threads.com`).
 
 Limits: text ≤500 chars (enforced via truncation), images JPEG/PNG ≤8MB
 (**not** enforced client-side — a violation surfaces as a real Graph API

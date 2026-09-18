@@ -9,7 +9,7 @@
  * `pnpm --filter api run worker`).
  *
  * Run with:
- *   tsx --env-file-if-exists=.env src/scripts/publish-test-post.ts --account=<social_account_id> [--text="..."]
+ *   tsx --env-file-if-exists=.env src/scripts/publish-test-post.ts --account=<social_account_id> [--text="..."] [--media-type=carousel] [--media-urls=<url1,url2>]
  *
  * It does NOT clean up: a real published post can't be un-published, and the
  * scheduled_post row is worth keeping as evidence. Jitter is disabled so the
@@ -28,13 +28,22 @@ function argValue(name: string): string | undefined {
 }
 
 const POLL_INTERVAL_MS = 2000;
-const POLL_TIMEOUT_MS = 120_000;
+const POLL_TIMEOUT_MS = 180_000;
 
 async function main() {
   const accountId = argValue("account");
   if (!accountId) throw new Error("pass --account=<social_account_id>");
   const text =
     argValue("text") ?? `RichFeed end-to-end publish check ${new Date().toISOString()}`;
+  const mediaTypeRaw = argValue("media-type");
+  const mediaType =
+    mediaTypeRaw === "image" || mediaTypeRaw === "video" || mediaTypeRaw === "carousel"
+      ? mediaTypeRaw
+      : null;
+  const mediaUrls = (argValue("media-urls") ?? "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter((u) => u.length > 0);
 
   const supabase = getSupabaseClient();
   const { data: account, error } = await supabase
@@ -51,10 +60,12 @@ async function main() {
   const post = await createScheduledPost(account.user_id as string, {
     caption: text,
     hashtags: [],
-    mediaUrls: [],
-    mediaType: null,
+    mediaUrls: mediaUrls.length > 0 ? mediaUrls : [],
+    mediaType,
   });
-  console.log(`[publish-test] scheduled_post ${post.id}  caption=${JSON.stringify(text)}`);
+  console.log(
+    `[publish-test] scheduled_post ${post.id}  caption=${JSON.stringify(text)} mediaType=${mediaType ?? "text"} urls=${mediaUrls.length}`,
+  );
 
   const publishAt = new Date(Date.now() + 2000);
   const target = await addPostTarget(post.id, accountId, publishAt);

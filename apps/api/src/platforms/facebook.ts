@@ -1,5 +1,6 @@
 import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
+import { requireCarouselImageUrls } from "./carousel-urls";
 import { buildMetaError } from "./meta-shared";
 import {
   PlatformPublishError,
@@ -12,7 +13,7 @@ import {
 const GRAPH_VERSION = "v21.0";
 
 function assertSupportedMedia(post: PublishPost): void {
-  const reason = unsupportedMediaReason("facebook", post.mediaType);
+  const reason = unsupportedMediaReason("facebook", post.mediaType, post.mediaUrls?.length);
   if (reason) throw new PlatformPublishError(reason, false);
 }
 
@@ -32,6 +33,11 @@ export async function publishToFacebook(
 
   const pageAccessToken = decrypt(account.accessToken);
   const message = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
+
+  if (post.mediaType === "carousel") {
+    return publishFacebookCarousel(account.platformAccountId, pageAccessToken, message, post);
+  }
+
   const isPhoto = post.mediaType === "image" && !!post.mediaUrls && post.mediaUrls.length > 0;
 
   const url = isPhoto
@@ -63,4 +69,50 @@ export async function publishToFacebook(
   const platformPostId = data.post_id ?? data.id;
 
   return { platformPostId, permalinkUrl: `https://www.facebook.com/${platformPostId}` };
+}
+
+/**
+ * Multi-photo Page post: unpublished photo uploads, then one /feed post with
+ * attached_media[]. 2–10 images. Caption lives on the feed post, not the
+ * unpublished photos (those expire ~24h if never attached).
+ */
+async function publishFacebookCarousel(
+  pageId: string,
+  pageAccessToken: string,
+  message: string,
+  post: PublishPost,
+): Promise<PublishResult> {
+  const urls = requireCarouselImageUrls("facebook", post);
+  const photoIds: string[] = [];
+
+  for (const url of urls) {
+    const upload = new URLSearchParams({
+      access_token: pageAccessToken,
+      url,
+      published: "false",
+    });
+    const uploadRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: upload,
+    });
+    if (!uploadRes.ok) throw await buildMetaError(uploadRes);
+    const uploaded = (await uploadRes.json()) as { id: string };
+    photoIds.push(uploaded.id);
+  }
+
+  const feed = new URLSearchParams({ access_token: pageAccessToken, message });
+  photoIds.forEach((id, index) => {
+    feed.set(`attached_media[${index}]`, JSON.stringify({ media_fbid: id }));
+  });
+
+  const feedRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: feed,
+  });
+  if (!feedRes.ok) throw await buildMetaError(feedRes);
+
+  const data = (await feedRes.json()) as { id: string };
+  return { platformPostId: data.id, permalinkUrl: `https://www.facebook.com/${data.id}` };
 }

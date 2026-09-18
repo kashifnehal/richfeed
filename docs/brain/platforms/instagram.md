@@ -10,9 +10,13 @@ that; it doesn't hold for this app's actual Meta dashboard setup).
 
 ## Scope
 
-Image or video, no caption-only post (Instagram requires media) and no
-carousel. `platforms/instagram.ts`'s `assertSupportedMedia` rejects anything
-else immediately, before any network call.
+Image, video (as a Reel), or carousel. No caption-only post (Instagram
+requires media). `assertSupportedMedia` rejects text-only. Carousel is
+2–10 image children; Meta also allows mixed image/video children
+(`media_type=VIDEO` on a child — **not** `REELS`, which is rejected as a
+carousel item). Compose still rejects mixed image+video, so the adapter
+path is images only. The single-video REELS path is separate and must not
+be changed when touching carousel.
 
 ## OAuth
 
@@ -56,7 +60,9 @@ line have moved before).
 1. `POST /{ig-user-id}/media` — `image_url` or (`video_url` +
    `media_type=REELS` + `share_to_feed=true`) + `caption` (truncated to 2,200
    chars) → `{id: <container-id>}`. `media_type=VIDEO` is rejected live by
-   Meta (error_subcode 2207067, 2026-09-17).
+   Meta (error_subcode 2207067, 2026-09-17) **for a standalone video**;
+   carousel children that are video would still use `VIDEO` (not implemented
+   — compose forbids mixed).
 2. Poll `GET /{container-id}?fields=status_code` until `FINISHED` (or
    `ERROR`/`EXPIRED`, which fails the target with a clear message) — images
    are near-instant but this polls at least once regardless, per spec,
@@ -68,6 +74,15 @@ line have moved before).
    be pattern-constructed the way X's or Facebook's can. Best-effort: a
    failed permalink fetch doesn't fail an otherwise-successful publish (see
    migration `0005_post_target_permalink.sql`).
+
+Carousel (image-only children, 2–10):
+
+1. For each image: `POST /{ig-user-id}/media` with `image_url` +
+   `is_carousel_item=true` (no caption on children). Poll each child to
+   `FINISHED`.
+2. `POST /{ig-user-id}/media` with `media_type=CAROUSEL`,
+   `children=<comma-separated child ids>`, `caption`. Poll the parent.
+3. Same `/media_publish` as a single image, using the parent container id.
 
 Limits: caption ≤2,200 chars (enforced), images JPEG only (**not** enforced
 — a violation surfaces as a real Graph API error rather than being caught

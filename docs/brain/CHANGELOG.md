@@ -611,6 +611,23 @@ a copyright-omit case).
 Deviations/known gaps: none for this step. 60-day token refresh job
 still not built.
 
+## 2026-09-18 — Carousel / multi-image adapters (commit PENDING)
+
+What shipped: `PLATFORM_MEDIA_CAPS` now has `carousel: true` for LinkedIn,
+Facebook Pages, Instagram, and Threads (X and YouTube untouched). Compose
+already derived `mediaType: "carousel"` for 2+ images via `deriveMediaType`;
+the per-target warning now treats carousel as supported on those four and
+still blocks X/YouTube. Adapters: LinkedIn `content.multiImage` (2–20);
+Facebook unpublished photos + `attached_media` (2–10); Instagram child
+containers + parent `CAROUSEL` (2–10, REELS path untouched); Threads child
+containers + parent `CAROUSEL` (2–20, 30s wait kept). Schedule-time 400
+also enforces per-platform item-count bounds. Live publish evidence is
+filled in after each platform's worker-deployed test, not claimed here.
+
+Deviations/known gaps: mixed image+video carousel is not in this pass
+(compose still rejects mixed). X excluded (billing pause). No per-image
+alt text. Carousel not yet live-verified on any platform at commit time.
+
 ## Template for future entries
 
 ```

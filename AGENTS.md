@@ -54,18 +54,18 @@ All platform connects use a **connect-ticket pattern**: a short-lived, single-us
 
 | Platform | Text-only | Image | Video | Carousel |
 |---|---|---|---|---|
-| LinkedIn (personal) | Yes | Yes | No — explicitly rejected in code | No |
-| Facebook (Page) | Yes | Yes | No — explicitly rejected in code | No |
-| Threads | Yes | Yes | No — explicitly rejected in code | No |
-| X | Yes | Yes | No — explicitly rejected in code | No |
-| Instagram | No — media required | Yes | Code attempts it, but currently fails live (Meta 400 "Invalid parameter") | No |
-| YouTube | No — video required | No — video required | Required, but currently fails live (401 on the upload call) | N/A |
+| LinkedIn (personal) | Yes | Yes | No — explicitly rejected in code | Yes — Posts API `content.multiImage` (2–20 images). Not the sponsored Carousel API. |
+| Facebook (Page) | Yes | Yes | No — explicitly rejected in code | Yes — unpublished `/{page-id}/photos` then `/{page-id}/feed` `attached_media` (2–10 images) |
+| Threads | Yes | Yes | No — explicitly rejected in code | Yes — child containers (`is_carousel_item=true`) then parent `media_type=CAROUSEL` (2–20 images) |
+| X | Yes | Yes | No — explicitly rejected in code | No — paused by founder billing choice; out of the carousel pass |
+| Instagram | No — media required | Yes | Yes — publishes as a Reel (`media_type=REELS`, verified live 2026-09-18) | Yes — child containers then parent `media_type=CAROUSEL` (2–10 images). Meta allows mixed image/video children (`VIDEO`, not `REELS`); compose still rejects mixed. |
+| YouTube | No — video required | No — video required | Required (live verified 2026-09-18) | N/A — no carousel concept |
 
-Four of the five text/image platforms (LinkedIn, Facebook, Threads, X) each have a near-identical `assertSupportedMedia()` guard in their adapter file (`apps/api/src/platforms/{linkedin,facebook,threads,x}.ts`) that throws `PlatformPublishError("<Platform> publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.", false)` for video/carousel. This is correct, by-design behavior — not a bug to fix.
+`assertSupportedMedia()` in every adapter calls `unsupportedMediaReason()` from `packages/shared/src/capabilities.ts` — that file is the single source of truth. Video is still rejected on LinkedIn/Facebook/Threads/X. Carousel is rejected on X and YouTube. Schedule-time `POST /api/posts` 400 and the compose UI both read the same matrix.
 
-Instagram (`apps/api/src/platforms/instagram.ts`) uses `GRAPH_HOST = "graph.instagram.com"` (the standalone "Instagram API with Instagram Login" product — not `graph.facebook.com`, which is a different, legacy product with different setup). It allows image and (attempted) video. Video posting is currently broken (see open issues below).
+Instagram (`apps/api/src/platforms/instagram.ts`) uses `GRAPH_HOST = "graph.instagram.com"` (the standalone "Instagram API with Instagram Login" product — not `graph.facebook.com`). Do not change the working REELS video path when touching carousel.
 
-**Product gap, not yet fixed:** none of this capability matrix is enforced *before* a post is scheduled — a user can currently schedule a video to LinkedIn/Facebook/Threads/X and only find out it failed after the fact, from the failed post status. This is the top-priority open issue (see §5).
+**Pre-schedule validation:** the old "user can schedule video to LinkedIn and only find out after it fails" gap was fixed 2026-09-18. Carousel item-count bounds (IG/FB 2–10, LinkedIn/Threads 2–20) are checked in the same helper when a URL count is provided.
 
 ## 4. Per-platform OAuth / setup gotchas already learned
 

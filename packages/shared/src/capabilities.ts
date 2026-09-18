@@ -8,10 +8,12 @@
  * same checks, so this file cannot drift from publish-time rejection.
  *
  * Mirrors the adapter behavior in apps/api/src/platforms/{linkedin,facebook,
- * threads,x,instagram,youtube}.ts, not a wishlist. Instagram video is
- * allowed here because the adapter allows it (the live Meta 400 is a
- * separate publish-time bug). TikTok / Pinterest / LinkedIn Company Pages /
- * Reddit have no adapter — treated as unsupported.
+ * threads,x,instagram,youtube}.ts, not a wishlist. Carousel is live on
+ * LinkedIn / Facebook Pages / Instagram / Threads (image-only children;
+ * compose still rejects mixed image+video). X stays carousel:false (paused
+ * billing, out of this pass). YouTube has no carousel concept.
+ * TikTok / Pinterest / LinkedIn Company Pages / Reddit have no adapter —
+ * treated as unsupported.
  */
 import type { MediaType, Platform } from "./types";
 
@@ -32,16 +34,35 @@ const TEXT_OR_SINGLE_IMAGE: PlatformMediaCaps = {
   carousel: false,
 };
 
+const TEXT_IMAGE_CAROUSEL: PlatformMediaCaps = {
+  text: true,
+  image: true,
+  video: false,
+  carousel: true,
+};
+
+/**
+ * Documented item bounds for platforms that accept carousel. Checked at
+ * schedule time when a media URL count is provided, and again in each
+ * adapter. Instagram/Facebook: 2–10; LinkedIn/Threads: 2–20.
+ */
+export const CAROUSEL_ITEM_LIMITS: Partial<Record<Platform, { min: number; max: number }>> = {
+  linkedin_personal: { min: 2, max: 20 },
+  facebook: { min: 2, max: 10 },
+  instagram: { min: 2, max: 10 },
+  threads: { min: 2, max: 20 },
+};
+
 /**
  * `null` means no publish adapter exists for that platform. Every in-scope
  * platform with a real adapter has an explicit row.
  */
 export const PLATFORM_MEDIA_CAPS: Record<Platform, PlatformMediaCaps | null> = {
-  linkedin_personal: TEXT_OR_SINGLE_IMAGE,
-  facebook: TEXT_OR_SINGLE_IMAGE,
-  threads: TEXT_OR_SINGLE_IMAGE,
+  linkedin_personal: TEXT_IMAGE_CAROUSEL,
+  facebook: TEXT_IMAGE_CAROUSEL,
+  threads: TEXT_IMAGE_CAROUSEL,
   twitter: TEXT_OR_SINGLE_IMAGE,
-  instagram: { text: false, image: true, video: true, carousel: false },
+  instagram: { text: false, image: true, video: true, carousel: true },
   youtube: { text: false, image: false, video: true, carousel: false },
   linkedin_org: null,
   tiktok: null,
@@ -91,6 +112,13 @@ export function isMediaSupportedOnPlatform(
   return caps[mediaKindFromType(mediaType)];
 }
 
+function carouselCountReason(platform: Platform, mediaUrlCount: number): string | null {
+  const limits = CAROUSEL_ITEM_LIMITS[platform];
+  if (!limits) return null;
+  if (mediaUrlCount >= limits.min && mediaUrlCount <= limits.max) return null;
+  return `${PLATFORM_DISPLAY[platform]} carousel posts need between ${limits.min} and ${limits.max} images.`;
+}
+
 /**
  * Full rejection sentence, matching (and now owned by) each adapter's
  * `assertSupportedMedia()` message. Null if the combo is allowed.
@@ -98,8 +126,14 @@ export function isMediaSupportedOnPlatform(
 export function unsupportedMediaReason(
   platform: Platform,
   mediaType: MediaType | null | undefined,
+  mediaUrlCount?: number,
 ): string | null {
-  if (isMediaSupportedOnPlatform(platform, mediaType)) return null;
+  if (isMediaSupportedOnPlatform(platform, mediaType)) {
+    if (mediaKindFromType(mediaType) === "carousel" && mediaUrlCount !== undefined) {
+      return carouselCountReason(platform, mediaUrlCount);
+    }
+    return null;
+  }
 
   const caps = PLATFORM_MEDIA_CAPS[platform];
   if (!caps) {
@@ -108,15 +142,15 @@ export function unsupportedMediaReason(
 
   switch (platform) {
     case "linkedin_personal":
-      return "LinkedIn publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.";
+      return "LinkedIn publishing only supports text-only, single-image, or carousel posts right now — video isn't supported yet.";
     case "facebook":
-      return "Facebook Page publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.";
+      return "Facebook Page publishing only supports text-only, single-image, or carousel posts right now — video isn't supported yet.";
     case "threads":
-      return "Threads publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.";
+      return "Threads publishing only supports text-only, single-image, or carousel posts right now — video isn't supported yet.";
     case "twitter":
       return "X publishing only supports text-only or single-image posts right now — video and carousel aren't supported yet.";
     case "instagram":
-      return "Instagram posts need an image or video attached — text-only and carousel aren't supported yet.";
+      return "Instagram posts need an image, video, or carousel attached — text-only isn't supported.";
     case "youtube":
       return "YouTube only supports video posts.";
     default:
@@ -132,13 +166,14 @@ export interface UnsupportedMediaFailure {
 export function collectUnsupportedMedia(
   platforms: readonly Platform[],
   mediaType: MediaType | null | undefined,
+  mediaUrlCount?: number,
 ): UnsupportedMediaFailure[] {
   const seen = new Set<Platform>();
   const failures: UnsupportedMediaFailure[] = [];
   for (const platform of platforms) {
     if (seen.has(platform)) continue;
     seen.add(platform);
-    const reason = unsupportedMediaReason(platform, mediaType);
+    const reason = unsupportedMediaReason(platform, mediaType, mediaUrlCount);
     if (reason) failures.push({ platform, reason });
   }
   return failures;
@@ -164,8 +199,9 @@ export class UnsupportedMediaError extends Error {
 export function throwIfUnsupportedMedia(
   platforms: readonly Platform[],
   mediaType: MediaType | null | undefined,
+  mediaUrlCount?: number,
 ): void {
-  const failures = collectUnsupportedMedia(platforms, mediaType);
+  const failures = collectUnsupportedMedia(platforms, mediaType, mediaUrlCount);
   if (failures.length > 0) {
     throw new UnsupportedMediaError(failures);
   }
@@ -175,7 +211,8 @@ export function throwIfUnsupportedMedia(
 export function unsupportedMediaErrorMessage(
   platforms: readonly Platform[],
   mediaType: MediaType | null | undefined,
+  mediaUrlCount?: number,
 ): string | null {
-  const failures = collectUnsupportedMedia(platforms, mediaType);
+  const failures = collectUnsupportedMedia(platforms, mediaType, mediaUrlCount);
   return failures.length > 0 ? formatUnsupportedMediaError(failures) : null;
 }

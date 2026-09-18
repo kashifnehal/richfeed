@@ -706,7 +706,7 @@ export async function createScheduledPostWithTargets(
       userId,
       input.targets.map((t) => t.socialAccountId),
     );
-    throwIfUnsupportedMedia(platforms, input.mediaType);
+    throwIfUnsupportedMedia(platforms, input.mediaType, input.mediaUrls?.length ?? 0);
   }
 
   const post = await createScheduledPost(userId, {
@@ -760,14 +760,16 @@ export async function updateScheduledPostFields(
   id: string,
   patch: UpdatePostFieldsInput,
 ): Promise<ScheduledPostDto | null> {
-  if (patch.mediaType !== undefined) {
+  if (patch.mediaType !== undefined || patch.mediaUrls !== undefined) {
     const existing = await getScheduledPostDetail(userId, id);
     if (!existing) return null;
     const platforms = existing.targets
       .filter((t) => t.status !== "published")
       .map((t) => t.account?.platform)
       .filter((p): p is Platform => Boolean(p));
-    throwIfUnsupportedMedia(platforms, patch.mediaType);
+    const mediaType = patch.mediaType !== undefined ? patch.mediaType : existing.mediaType;
+    const urlCount = patch.mediaUrls !== undefined ? (patch.mediaUrls?.length ?? 0) : (existing.mediaUrls?.length ?? 0);
+    throwIfUnsupportedMedia(platforms, mediaType, urlCount);
   }
 
   const update: Record<string, unknown> = {};
@@ -797,10 +799,10 @@ export async function updateScheduledPostFields(
 async function getOwnedTarget(
   userId: string,
   targetId: string,
-): Promise<{ id: string; status: string; platform: Platform | null; mediaType: MediaType | null } | null> {
+): Promise<{ id: string; status: string; platform: Platform | null; mediaType: MediaType | null; mediaUrlCount: number } | null> {
   const { data, error } = await getSupabaseClient()
     .from("post_targets")
-    .select("id, status, social_accounts(platform), scheduled_posts!inner(user_id, media_type)")
+    .select("id, status, social_accounts(platform), scheduled_posts!inner(user_id, media_type, media_urls)")
     .eq("id", targetId)
     .eq("scheduled_posts.user_id", userId)
     .maybeSingle();
@@ -812,14 +814,16 @@ async function getOwnedTarget(
 
   const account = data.social_accounts as { platform?: Platform } | { platform?: Platform }[] | null;
   const accountRow = Array.isArray(account) ? (account[0] ?? null) : account;
-  const post = data.scheduled_posts as { media_type?: MediaType | null } | { media_type?: MediaType | null }[] | null;
+  const post = data.scheduled_posts as { media_type?: MediaType | null; media_urls?: string[] | null } | { media_type?: MediaType | null; media_urls?: string[] | null }[] | null;
   const postRow = Array.isArray(post) ? (post[0] ?? null) : post;
+  const mediaUrls = postRow?.media_urls;
 
   return {
     id: data.id as string,
     status: data.status as string,
     platform: accountRow?.platform ?? null,
     mediaType: postRow?.media_type ?? null,
+    mediaUrlCount: Array.isArray(mediaUrls) ? mediaUrls.length : 0,
   };
 }
 
@@ -836,7 +840,7 @@ export async function rescheduleTarget(
   if (!target) return { ok: false, reason: "not_found" };
   if (target.status === "published") return { ok: false, reason: "already_published" };
   if (target.platform) {
-    throwIfUnsupportedMedia([target.platform], target.mediaType);
+    throwIfUnsupportedMedia([target.platform], target.mediaType, target.mediaUrlCount);
   }
 
   const nextStatus = target.status === "failed" ? "pending" : target.status;

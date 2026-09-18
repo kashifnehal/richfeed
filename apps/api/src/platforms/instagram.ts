@@ -1,5 +1,6 @@
 import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
+import { requireCarouselImageUrls } from "./carousel-urls";
 import { buildMetaError } from "./meta-shared";
 import {
   PlatformPublishError,
@@ -23,7 +24,7 @@ const VIDEO_POLL_ATTEMPTS = 30;
 const CAPTION_MAX_LENGTH = 2200;
 
 function assertSupportedMedia(post: PublishPost): void {
-  const reason = unsupportedMediaReason("instagram", post.mediaType);
+  const reason = unsupportedMediaReason("instagram", post.mediaType, post.mediaUrls?.length);
   if (reason) throw new PlatformPublishError(reason, false);
 }
 
@@ -91,6 +92,10 @@ export async function publishToInstagram(
   const accessToken = decrypt(account.accessToken);
   const caption = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
 
+  if (post.mediaType === "carousel") {
+    return publishInstagramCarousel(account.platformAccountId, accessToken, caption, post);
+  }
+
   const containerId = await createContainer(account.platformAccountId, accessToken, post, caption);
   await waitForContainerReady(
     containerId,
@@ -108,6 +113,78 @@ export async function publishToInstagram(
   const platformPostId = ((await publishRes.json()) as { id: string }).id;
 
   // Best-effort — a missing permalink shouldn't fail an otherwise-successful publish.
+  let permalinkUrl: string | undefined;
+  try {
+    const permalinkRes = await fetch(
+      `https://${GRAPH_HOST}/${GRAPH_VERSION}/${platformPostId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    if (permalinkRes.ok) {
+      permalinkUrl = ((await permalinkRes.json()) as { permalink?: string }).permalink;
+    }
+  } catch {
+    // keep permalinkUrl undefined
+  }
+
+  return { platformPostId, permalinkUrl };
+}
+
+/**
+ * Carousel: N child containers (is_carousel_item=true), then a parent with
+ * media_type=CAROUSEL + children=<ids>, then the same /media_publish used
+ * for single image/reel. 2–10 image children. Video children are allowed by
+ * Meta (media_type=VIDEO, not REELS) but compose still rejects mixed
+ * image+video, so this path is images only. The REELS single-video path
+ * above is untouched.
+ */
+async function publishInstagramCarousel(
+  igUserId: string,
+  accessToken: string,
+  caption: string,
+  post: PublishPost,
+): Promise<PublishResult> {
+  const urls = requireCarouselImageUrls("instagram", post);
+  const childIds: string[] = [];
+
+  for (const imageUrl of urls) {
+    const childBody = new URLSearchParams({
+      access_token: accessToken,
+      image_url: imageUrl,
+      is_carousel_item: "true",
+    });
+    const childRes = await fetch(`https://${GRAPH_HOST}/${GRAPH_VERSION}/${igUserId}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: childBody,
+    });
+    if (!childRes.ok) throw await buildMetaError(childRes);
+    const childId = ((await childRes.json()) as { id: string }).id;
+    await waitForContainerReady(childId, accessToken, IMAGE_POLL_ATTEMPTS);
+    childIds.push(childId);
+  }
+
+  const parentBody = new URLSearchParams({
+    access_token: accessToken,
+    media_type: "CAROUSEL",
+    children: childIds.join(","),
+    caption: caption.slice(0, CAPTION_MAX_LENGTH),
+  });
+  const parentRes = await fetch(`https://${GRAPH_HOST}/${GRAPH_VERSION}/${igUserId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: parentBody,
+  });
+  if (!parentRes.ok) throw await buildMetaError(parentRes);
+  const parentId = ((await parentRes.json()) as { id: string }).id;
+  await waitForContainerReady(parentId, accessToken, IMAGE_POLL_ATTEMPTS);
+
+  const publishRes = await fetch(`https://${GRAPH_HOST}/${GRAPH_VERSION}/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ creation_id: parentId, access_token: accessToken }),
+  });
+  if (!publishRes.ok) throw await buildMetaError(publishRes);
+  const platformPostId = ((await publishRes.json()) as { id: string }).id;
+
   let permalinkUrl: string | undefined;
   try {
     const permalinkRes = await fetch(

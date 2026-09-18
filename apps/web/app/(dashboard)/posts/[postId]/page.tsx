@@ -62,12 +62,16 @@ export default function PostDetailPage() {
     .filter((t) => t.status !== "published")
     .map((t) => t.account?.platform)
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
-  const mediaCapabilityError = unsupportedMediaErrorMessage(unpublishedPlatforms, mediaType);
+  const mediaCapabilityError = unsupportedMediaErrorMessage(unpublishedPlatforms, mediaType, media.length);
   const failedPlatforms = (post?.targets ?? [])
     .filter((t) => t.status === "failed")
     .map((t) => t.account?.platform)
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
-  const rescheduleBlockedError = unsupportedMediaErrorMessage(failedPlatforms, post?.mediaType ?? null);
+  const rescheduleBlockedError = unsupportedMediaErrorMessage(
+    failedPlatforms,
+    post?.mediaType ?? null,
+    post?.mediaUrls?.length ?? 0,
+  );
 
   async function handleSaveFields() {
     if (mediaError) {

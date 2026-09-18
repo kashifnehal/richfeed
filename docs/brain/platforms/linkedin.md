@@ -8,8 +8,11 @@ credentials. Company Pages (`linkedin_org`) remain deliberately deferred
 
 ## Scope
 
-Text-only and single-image only. Video/carousel fail immediately
-(`assertSupportedMedia`), same pattern as every other adapter.
+Text-only, single-image, and carousel (organic `content.multiImage`, 2–20
+images). Video still fails immediately (`assertSupportedMedia`). LinkedIn's
+sponsored Carousel API (`content.carousel` + `adContext`) is a different
+product and is not used — confirmed against the MultiImage API docs
+(view `li-lms-2026-08`).
 
 ## OAuth
 
@@ -51,6 +54,10 @@ Text-only and single-image only. Video/carousel fail immediately
   image } }`; fetch the image bytes from its Supabase Storage URL, `PUT`
   them to `uploadUrl`, then include `content: { media: { id: image } }` in
   the same `/rest/posts` body above.
+- Carousel / multi-image: same `uploadImage()` once per URL (2–20), then
+  `content: { multiImage: { images: [{ id: urn }, ...] } }` instead of
+  `content.media.id`. `altText` is optional in the API; RichFeed does not
+  currently store per-image alt text so it is omitted.
 - Success: `201`, the post URN comes back in the **`x-restli-id` response
   header** (not the body) — that's the `platformPostId`.
 - Permalink: `https://www.linkedin.com/feed/update/{platformPostId}/` — a

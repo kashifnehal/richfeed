@@ -1,6 +1,8 @@
 import { resolvePlatformCaption, unsupportedMediaReason } from "@richfeed/shared";
 import { decrypt } from "../lib/crypto";
 import { requireEnv } from "../lib/env";
+import { logPlatformApiError, readResponseBody } from "../lib/log-platform-error";
+import { requireCarouselImageUrls } from "./carousel-urls";
 import {
   PlatformPublishError,
   type PublishAccount,
@@ -13,7 +15,7 @@ const POSTS_URL = "https://api.linkedin.com/rest/posts";
 const IMAGES_URL = "https://api.linkedin.com/rest/images?action=initializeUpload";
 
 function assertSupportedMedia(post: PublishPost): void {
-  const reason = unsupportedMediaReason("linkedin_personal", post.mediaType);
+  const reason = unsupportedMediaReason("linkedin_personal", post.mediaType, post.mediaUrls?.length);
   if (reason) throw new PlatformPublishError(reason, false);
 }
 
@@ -27,12 +29,15 @@ function linkedinHeaders(accessToken: string): Record<string, string> {
 }
 
 async function throwLinkedInError(res: Response): Promise<never> {
+  const parsed = await readResponseBody(res);
+  logPlatformApiError("linkedin", res.status, res.url, parsed);
+
   let message = `LinkedIn API error (${res.status})`;
-  try {
-    const body = (await res.json()) as { message?: string };
-    if (body.message) message = body.message;
-  } catch {
-    // no JSON body — keep the generic message
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const body = parsed as { message?: string };
+    if (typeof body.message === "string" && body.message.length > 0) message = body.message;
+  } else if (typeof parsed === "string" && parsed.length > 0) {
+    message = parsed.slice(0, 500);
   }
   throw new PlatformPublishError(message, res.status === 401 || res.status === 403, res.status);
 }
@@ -80,11 +85,6 @@ export async function publishToLinkedIn(
   const authorUrn = `urn:li:person:${account.platformAccountId}`;
   const commentary = resolvePlatformCaption(target.platformCaptionOverride, post.caption);
 
-  let imageUrn: string | undefined;
-  if (post.mediaType === "image" && post.mediaUrls && post.mediaUrls.length > 0) {
-    imageUrn = await uploadImage(accessToken, authorUrn, post.mediaUrls[0]!);
-  }
-
   const body: Record<string, unknown> = {
     author: authorUrn,
     commentary,
@@ -93,8 +93,18 @@ export async function publishToLinkedIn(
     lifecycleState: "PUBLISHED",
     isReshareDisabledByAuthor: false,
   };
-  if (imageUrn) {
-    body.content = { media: { id: imageUrn } };
+
+  if (post.mediaType === "carousel") {
+    const urls = requireCarouselImageUrls("linkedin_personal", post);
+    const images: { id: string }[] = [];
+    for (const url of urls) {
+      images.push({ id: await uploadImage(accessToken, authorUrn, url) });
+    }
+    // Organic multi-image uses Posts API content.multiImage (2–20 image URNs).
+    // LinkedIn's sponsored Carousel API is a different product and is not used.
+    body.content = { multiImage: { images } };
+  } else if (post.mediaType === "image" && post.mediaUrls && post.mediaUrls.length > 0) {
+    body.content = { media: { id: await uploadImage(accessToken, authorUrn, post.mediaUrls[0]!) } };
   }
 
   const res = await fetch(POSTS_URL, {

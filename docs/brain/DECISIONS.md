@@ -255,3 +255,18 @@ the same post used `"test 2 : same thread"`. Decision: whitespace-only
 `resolvePlatformCaption` is the single fallback; API Zod + insert coerce
 `""` to `null`. There is no product path for publishing a deliberately
 blank platform caption.
+
+## 2026-09-18 — Carousel is organic multi-image, not LinkedIn sponsored Carousel / not Reels
+
+Carousel in RichFeed means 2+ images in one post (`media_type=carousel`).
+It is not Reels/short-video (Instagram already publishes video as a Reel;
+YouTube already publishes video). LinkedIn's Posts API has two different
+multi-card products: organic **MultiImage** (`content.multiImage.images`,
+2–20 image URNs, `w_member_social`) and sponsored **Carousel**
+(`content.carousel` + `adContext`, not available organically). We use
+MultiImage. Facebook uses unpublished photos + `attached_media`. Instagram
+and Threads use child containers + a parent `media_type=CAROUSEL`. X is
+out of this pass (billing pause). YouTube has no carousel concept. Mixed
+image+video carousel is allowed by Instagram/Threads APIs but compose
+still rejects mixed attachments — image-only children only, so LinkedIn
+and Facebook stay valid on the same post.

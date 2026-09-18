@@ -72,10 +72,14 @@ never a user token.
   than half-built.)
 - Photo post: `POST /{page-id}/photos` with `url` (the post's Supabase
   Storage media URL) + `caption`.
+- Carousel / multi-photo: `POST /{page-id}/photos` with `url` +
+  `published=false` per image (no caption on those uploads), then
+  `POST /{page-id}/feed` with `message` + `attached_media[n]={"media_fbid":…}`
+  (2–10). Feed `id` is the `platformPostId`.
 - `platformPostId`: a photo response's `id` is the **photo object**, not
   the Page post — `post_id` (present on a photo response, absent on a plain
   feed response) is the actual post identifier; the adapter uses
-  `post_id ?? id`.
+  `post_id ?? id`. Carousel uses the feed `id` directly.
 - Permalink: `https://www.facebook.com/{post-id}` — a pattern, not fetched.
   `{post-id}` is `{page-id}_{feed-post-id}` (text posts use Graph `id`).
   **Click-through verified 2026-09-18** on Page **RichFeed**
@@ -98,8 +102,13 @@ named **RichFeed** (checkbox, not demo/fixture names). Confirm was not
 clicked this pass — the existing `social_accounts` row already matches
 that Page.
 
-Video and carousel are out of scope, same rejection pattern as every other
-adapter (`assertSupportedMedia`, checked before any network call).
+Video is still rejected (`assertSupportedMedia`). Carousel / multi-photo
+is live: each image is `POST /{page-id}/photos` with `published=false`
+(no caption on the unpublished upload), then one `POST /{page-id}/feed`
+with `message` + `attached_media[n]={"media_fbid":"<id>"}` (2–10 images).
+Unpublished photos expire ~24h if never attached; the feed call happens
+immediately after the uploads so that window is not a product concern.
+`platformPostId` for the carousel is the feed post `id` (`{pageId}_{postId}`).
 
 ## `needs_reconnect` trigger condition
 

@@ -76,8 +76,9 @@ export default function ComposePage() {
     () => unsupportedMediaErrorMessage(
       selectedAccounts.map((a) => a.platform),
       mediaType,
+      media.length,
     ),
-    [selectedAccounts, mediaType],
+    [selectedAccounts, mediaType, media.length],
   );
 
   async function handleSave(mode: "queue" | "draft") {

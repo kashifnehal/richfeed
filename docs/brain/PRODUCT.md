@@ -54,7 +54,7 @@ Content creation/generation (image/video/caption generation); social listening, 
 - Product is **live in production** as of commit `2716e3d`: web at `richfeed.social` (Vercel); API + worker on Railway (`richfeed-api` / `richfeed-worker`). Public API: `https://richfeed-api-production.up.railway.app` (`GET /health` 200).
 - Scheduling engine (data model, encrypted token storage, BullMQ scheduler/worker with real enqueue on create/reschedule): live.
 - Real frontend app — every MVP page, real Supabase Auth, real backend routes: live.
-- LinkedIn (personal), X, YouTube, Instagram, Facebook, and Threads all have real OAuth + publish wired. Per-platform status, blockers, and known bugs live in `platforms/STATUS.md` — do not duplicate that detail here.
+- LinkedIn (personal), X, YouTube, Instagram, Facebook, and Threads all have real OAuth + publish wired. Carousel / multi-image is wired on LinkedIn, Facebook Pages, Instagram, and Threads (X paused; YouTube has no carousel). Per-platform status, blockers, and known bugs live in `platforms/STATUS.md` — do not duplicate that detail here.
 - TikTok and Pinterest are permanently out of scope. LinkedIn Company Pages remain deferred.
 
 For exact commit SHAs and what shipped in each step, see `CHANGELOG.md`. For the full page/component spec, see the build-prompt archive (kept in the planning thread, not duplicated here to avoid drift).

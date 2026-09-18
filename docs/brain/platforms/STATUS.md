@@ -3,8 +3,9 @@
 Wiring status for every target platform. **Update this whenever a platform's
 status or blocker changes**, as part of that build step's commit.
 
-_Last updated: 2026-09-18 (Threads first live connect + text publish
-verified on `@richfeed_social` / `DdZyCi_AaHY`)._
+_Last updated: 2026-09-18 (carousel/multi-image adapters shipped for
+LinkedIn, Facebook Pages, Instagram, Threads — live evidence per platform
+follows in CHANGELOG)._
 
 ## Status legend
 
@@ -28,12 +29,12 @@ other real integration exists.
 
 | Platform | Tier | Status | Blocker | Last updated |
 | --- | --- | --- | --- | --- |
-| linkedin_personal | 1 | **real OAuth+publish live** | none — no review gate; connect + publish (text-only / single-image) both work end to end. Live permalink pattern click-through verified 2026-09-18 | 2026-09-18 |
-| twitter (X) | 1 | **real OAuth+publish live** | paused by founder choice — the X Developer API's pay-per-use credits are depleted (`402 credits depleted` on a real attempt). This is a billing decision, not a code bug — do not attempt a code fix | 2026-09-18 |
-| youtube | 1 | **real OAuth+publish live** | Google OAuth app is still in testing/unverified status, capping it to invited test users until verification review passes. Blank `platform_caption_override` (`""`) used to become YouTube title "Untitled" — adapters now fall back to the post caption | 2026-09-18 |
-| instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers. Video publish verified live as a Reel (`DdZpBMmFABj`, 2026-09-18) after switching `media_type` from deprecated `VIDEO` to `REELS` | 2026-09-18 |
-| facebook | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | same Meta Development Mode constraint as instagram. Live Page publish + permalink click-through verified 2026-09-18 on Page "RichFeed" | 2026-09-18 |
-| threads | 1 (dev-mode) / 2 (production) | **real OAuth+publish live (dev mode)** | Meta Threads App Review needed for production (non-tester) posting. First live connect + text publish verified 2026-09-18: identity stored `platform_account_id=28901533789454916` / `platform_username=richfeed_social`; post `DdZyCi_AaHY` | 2026-09-18 |
+| linkedin_personal | 1 | **real OAuth+publish live** | none — no review gate; connect + publish (text-only / single-image / carousel) all wired. Carousel live-verify pending this step. Live permalink pattern click-through verified 2026-09-18 for text | 2026-09-18 |
+| twitter (X) | 1 | **real OAuth+publish live** | paused by founder choice — the X Developer API's pay-per-use credits are depleted (`402 credits depleted` on a real attempt). This is a billing decision, not a code bug — do not attempt a code fix. Carousel out of this pass | 2026-09-18 |
+| youtube | 1 | **real OAuth+publish live** | Google OAuth app is still in testing/unverified status, capping it to invited test users until verification review passes. Blank `platform_caption_override` (`""`) used to become YouTube title "Untitled" — adapters now fall back to the post caption. No carousel concept | 2026-09-18 |
+| instagram | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | app is still in Meta Development Mode — Business Verification + Advanced Access review needed before it can post for anyone besides invited testers. Video publish verified live as a Reel (`DdZpBMmFABj`, 2026-09-18). Carousel adapter shipped 2026-09-18; live-verify pending this step | 2026-09-18 |
+| facebook | 1 (own-account) / 2 (multi-tenant) | **real OAuth+publish live (dev mode)** | same Meta Development Mode constraint as instagram. Live Page publish + permalink click-through verified 2026-09-18 on Page "RichFeed" (text). Carousel adapter shipped 2026-09-18; live-verify pending this step | 2026-09-18 |
+| threads | 1 (dev-mode) / 2 (production) | **real OAuth+publish live (dev mode)** | Meta Threads App Review needed for production (non-tester) posting. First live connect + text publish verified 2026-09-18: identity stored `platform_account_id=28901533789454916` / `platform_username=richfeed_social`; post `DdZyCi_AaHY`. Carousel adapter shipped 2026-09-18; live-verify pending this step | 2026-09-18 |
 | tiktok | — | **out of scope** | permanent founder decision, not planned | 2026-09-18 |
 | pinterest | — | **out of scope** | permanent founder decision, not planned | 2026-09-18 |
 | linkedin_org (Company Pages) | 3 | not started | LinkedIn Company Page Partner Program — deliberately deferred until Tier-1 is live with real usage to demo | 2026-08-29 |
