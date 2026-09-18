@@ -620,13 +620,34 @@ the per-target warning now treats carousel as supported on those four and
 still blocks X/YouTube. Adapters: LinkedIn `content.multiImage` (2–20);
 Facebook unpublished photos + `attached_media` (2–10); Instagram child
 containers + parent `CAROUSEL` (2–10, REELS path untouched); Threads child
-containers + parent `CAROUSEL` (2–20, 30s wait kept). Schedule-time 400
-also enforces per-platform item-count bounds. Live publish evidence is
-filled in after each platform's worker-deployed test, not claimed here.
+containers + parent `CAROUSEL` (2–20). Schedule-time 400 also enforces
+per-platform item-count bounds.
+
+Live verify (production worker `234c8b0a`, commit `22bc035`):
+- LinkedIn **Rich Feed** `aab015ee-…` published `urn:li:ugcPost:7506637615413153792`
+  (`https://www.linkedin.com/feed/update/urn:li:ugcPost:7506637615413153792/`)
+  — guest view shows caption, two-image carousel `1 / 2`.
+- Facebook Page **RichFeed** `155edec2-…` published
+  `1265025103369551_122110621161457841`
+  (`https://www.facebook.com/1265025103369551_122110621161457841`) — live
+  Page dialog shows both images side by side and the caption.
+- Instagram `@richfeed_social` `a2bce631-…` published `17868636339648974`
+  (`https://www.instagram.com/p/DdbECMTmyVe/`) — feed `/p/` (not `/reel/`),
+  two carousel dots, caption visible.
 
 Deviations/known gaps: mixed image+video carousel is not in this pass
 (compose still rejects mixed). X excluded (billing pause). No per-image
-alt text. Carousel not yet live-verified on any platform at commit time.
+alt text. Threads first live attempt failed (see next entry).
+
+## 2026-09-18 — Threads carousel: poll children before parent (commit PENDING)
+
+What shipped: first Threads carousel (`d34cf411-…`) 400'd at parent create
+with `error_subcode=4279004` "Invalid Carousel Children" (child
+`18116232160815858` not ready). Adapter now polls
+`GET /{container-id}?fields=status` until `FINISHED` on each child and the
+parent before `/threads_publish`. Single-image/text 30s delay is unchanged.
+
+Deviations/known gaps: live retry pending worker deploy of this commit.
 
 ## Template for future entries
 

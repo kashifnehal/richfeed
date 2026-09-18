@@ -15,6 +15,8 @@ const GRAPH_VERSION = "v1.0";
 // Meta's own guidance: wait before publishing a just-created container,
 // rather than firing immediately.
 const PUBLISH_DELAY_MS = 30_000;
+const POLL_INTERVAL_MS = 2000;
+const CONTAINER_POLL_ATTEMPTS = 30;
 // Documented limits: text <=500 chars, images JPEG/PNG <=8MB. Only the text
 // length is enforced here (truncated) — image size/type isn't checked
 // client-side; a violation surfaces as a real Graph API error instead.
@@ -23,6 +25,24 @@ const TEXT_MAX_LENGTH = 500;
 function assertSupportedMedia(post: PublishPost): void {
   const reason = unsupportedMediaReason("threads", post.mediaType, post.mediaUrls?.length);
   if (reason) throw new PlatformPublishError(reason, false);
+}
+
+/** Poll GET /{container-id}?fields=status until FINISHED. Required before attaching carousel children. */
+async function waitForThreadsContainerReady(containerId: string, accessToken: string): Promise<void> {
+  for (let attempt = 0; attempt < CONTAINER_POLL_ATTEMPTS; attempt++) {
+    const res = await fetch(
+      `https://${GRAPH_HOST}/${GRAPH_VERSION}/${containerId}?fields=status,error_message&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    if (!res.ok) throw await buildMetaError(res);
+    const data = (await res.json()) as { status?: string; error_message?: string };
+    if (data.status === "FINISHED" || data.status === "PUBLISHED") return;
+    if (data.status === "ERROR" || data.status === "EXPIRED") {
+      const detail = data.error_message ? `: ${data.error_message}` : "";
+      throw new PlatformPublishError(`Threads media processing failed (${data.status}${detail})`, false);
+    }
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+  throw new PlatformPublishError("Threads media took too long to process", false);
 }
 
 export async function publishToThreads(
@@ -112,7 +132,9 @@ async function publishThreadsCarousel(
       body: childBody,
     });
     if (!childRes.ok) throw await buildMetaError(childRes);
-    childIds.push(((await childRes.json()) as { id: string }).id);
+    const childId = ((await childRes.json()) as { id: string }).id;
+    await waitForThreadsContainerReady(childId, accessToken);
+    childIds.push(childId);
   }
 
   const parentBody = new URLSearchParams({
@@ -128,8 +150,7 @@ async function publishThreadsCarousel(
   });
   if (!parentRes.ok) throw await buildMetaError(parentRes);
   const containerId = ((await parentRes.json()) as { id: string }).id;
-
-  await new Promise((resolve) => setTimeout(resolve, PUBLISH_DELAY_MS));
+  await waitForThreadsContainerReady(containerId, accessToken);
 
   const publishRes = await fetch(`https://${GRAPH_HOST}/${GRAPH_VERSION}/${threadsUserId}/threads_publish`, {
     method: "POST",

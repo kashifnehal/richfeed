@@ -59,11 +59,13 @@ Meta's Threads Posts docs 2026-09-18.
 
 Carousel (image-only children, 2–20): create each child with
 `media_type=IMAGE` + `image_url` + `is_carousel_item=true` (no `text` on
-children), then the parent with `media_type=CAROUSEL` + `children` +
-`text`, then the same 30s wait and `/threads_publish` on the parent.
-Meta allows mixed image/video children; compose still rejects mixed so
-this path is images only. Host remains `graph.threads.net` (not
-`graph.threads.com`).
+children), **poll `GET /{container-id}?fields=status` until `FINISHED`**
+(creating the parent immediately 400s with `error_subcode=4279004`
+"Invalid Carousel Children" — live on `d34cf411-…`, child
+`18116232160815858`), then the parent with `media_type=CAROUSEL` +
+`children` + `text`, poll the parent, then `/threads_publish`. Host
+remains `graph.threads.net`. Single-image/text still uses the 30s delay
+before publish and does not poll.
 
 Limits: text ≤500 chars (enforced via truncation), images JPEG/PNG ≤8MB
 (**not** enforced client-side — a violation surfaces as a real Graph API
