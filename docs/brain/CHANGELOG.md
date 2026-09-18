@@ -674,6 +674,14 @@ purge is a manual founder commitment. Disconnect does not wipe tokens or
 cancel queued jobs. No branded `privacy@richfeed.social` until MX/routing
 exists.
 
+## 2026-09-18 — Legal-page import paths (commit d8c0562)
+
+What shipped: first Vercel production deploy of the legal pages (`c28fa47`)
+went `ERROR` — `app/(legal)/*/page.tsx` imported `../../components` (resolves
+under `app/`) instead of `../../../`. Fixed and redeployed. Live verify
+below is against this commit (`dpl_CDjj5TrQFcR4UkZ1NVjT464NRpJJ`, READY,
+aliased to `richfeed.social`).
+
 ## Template for future entries
 
 ```
