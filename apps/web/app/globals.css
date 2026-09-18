@@ -12,3 +12,30 @@
     @apply bg-app text-primary;
   }
 }
+
+@layer components {
+  .legal-body h2 {
+    @apply mt-8 text-lg font-semibold text-primary;
+  }
+
+  .legal-body h2:first-child {
+    @apply mt-0;
+  }
+
+  .legal-body p,
+  .legal-body li {
+    @apply text-sm leading-relaxed text-primary;
+  }
+
+  .legal-body p {
+    @apply mt-3;
+  }
+
+  .legal-body ul {
+    @apply mt-3 list-disc space-y-1.5 pl-5;
+  }
+
+  .legal-body a {
+    @apply font-medium text-accent hover:text-accent-hover;
+  }
+}

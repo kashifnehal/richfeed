@@ -3,9 +3,8 @@
 How real each page is. **Update this whenever a page moves between states**, as
 part of that build step's commit.
 
-_Last updated: 2026-09-18 (carousel compose + capability matrix: 2+ images
-sets `mediaType: "carousel"`; LinkedIn/Facebook/Instagram/Threads accept it;
-X and YouTube still block)._
+_Last updated: 2026-09-18 (public Privacy / Terms / Data Deletion pages live
+at richfeed.social)._
 
 ## Status legend
 
@@ -33,6 +32,9 @@ X and YouTube still block)._
 | Settings › Profile | `/(dashboard)/settings` | live data | Name / avatar via Supabase Auth. Inputs have `name`/`autocomplete`/associated labels. |
 | Settings › Workspace | `/(dashboard)/settings` | live data | Reads/writes the real `workspaces` table via `GET`/`PATCH /api/workspace` (RLS: owner-only). The old `user_metadata.workspace_name` path is gone; layout + Sidebar footer ("_name_ / Workspace Admin") read the table. |
 | Settings › Notifications | `/(dashboard)/settings` | live data | Real toggles (`notify_on_failed_post`, `notify_on_needs_reconnect`) persisted via `GET`/`PATCH /api/notification-preferences`. NotificationBell respects them for its in-app list. No email/push delivery — persistence only. |
+| Privacy Policy | `/(legal)/privacy` | live data | Public (no auth). Describes actual collection (email, encrypted OAuth tokens, scheduled content/media), processors, 30-day deletion window. Live: `https://richfeed.social/privacy` |
+| Terms of Service | `/(legal)/terms` | live data | Public. Posts only at the user's direction; platform revoke/rate-limit/outage language. Live: `https://richfeed.social/terms` |
+| Data Deletion | `/(legal)/data-deletion` | live data | Public. Concrete disconnect / remove-permanently / email-for-full-deletion steps. Meta App Review field URL: `https://richfeed.social/data-deletion` |
 
 ## Shell / cross-page
 
@@ -41,4 +43,5 @@ X and YouTube still block)._
 | Dashboard shell (Sidebar + Topbar) | live data | Responsive: icon rail at lg, off-canvas drawer below lg. |
 | NotificationBell | live data | Unread dot + dropdown; rows navigate to the right post / to Accounts. Includes failed + needs_reconnect, filtered by the user's notification preferences. Last automated check was the deleted E2E suite. |
 | UserMenu | live data | Settings, Sign out. |
+| Site footer | live data | Privacy / Terms / Data Deletion links on sign-in, sign-up, forgot-password, every dashboard page, and the legal pages themselves. |
 | Responsive layout | live data | A former E2E spec asserted no horizontal overflow on dashboard pages at sm / md / lg. That check has not been re-run since the suite was removed. |

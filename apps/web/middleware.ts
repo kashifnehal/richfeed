@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const AUTH_PATHS = ["/sign-in", "/sign-up", "/forgot-password"];
 
+/** Public legal pages must resolve without a session — Meta App Review
+ *  fetches these URLs logged-out. Signed-in users can still read them. */
+const PUBLIC_PATHS = ["/privacy", "/terms", "/data-deletion"];
+
 /**
  * Refreshes the Supabase session cookie on every request (per @supabase/ssr's
  * recommended pattern) and protects the (dashboard) route group: signed-out
@@ -37,8 +41,9 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  if (!user && !isAuthPath && pathname !== "/") {
+  if (!user && !isAuthPath && !isPublicPath && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     return NextResponse.redirect(url);

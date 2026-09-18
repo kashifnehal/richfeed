@@ -270,3 +270,25 @@ out of this pass (billing pause). YouTube has no carousel concept. Mixed
 image+video carousel is allowed by Instagram/Threads APIs but compose
 still rejects mixed attachments — image-only children only, so LinkedIn
 and Facebook stay valid on the same post.
+
+## 2026-09-18 — Public legal pages; contact inbox; 30-day deletion is a manual commitment
+
+Privacy Policy, Terms of Service, and Data Deletion Instructions are public
+Next.js routes (`/privacy`, `/terms`, `/data-deletion`) allowed through
+middleware without a session. Copy is written against the running product
+(AES-256-GCM token storage, soft disconnect that does **not** wipe tokens,
+permanent remove blocked while `post_targets` exist, no self-serve full-account
+wipe). GDPR/CCPA-style access, deletion, and portability are stated on the
+Privacy Policy even though Meta's App Review bar is lower — honouring those
+is a founder process (email), not an in-app export endpoint.
+
+Contact is `adorablekashif786@gmail.com` because `richfeed.social` has no MX
+records; a branded `privacy@` address would bounce. If Cloudflare Email
+Routing is later pointed at that inbox, update `apps/web/lib/legal.ts` and
+the three pages.
+
+Full-account deletion is committed in the policy as **within 30 days of a
+verified request**. There is no automated purge job; the founder has to do
+it by hand (auth user, posts, media, tokens, workspace). Disconnect still
+does not cancel already-queued publishes — the Data Deletion page says so
+explicitly rather than pretending it does.

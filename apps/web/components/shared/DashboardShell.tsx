@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactElement, type ReactNode } from "react";
 import { getNavMeta } from "../../lib/nav";
 import { NotificationBell } from "./NotificationBell";
+import { SiteFooter } from "./SiteFooter";
 import { UserMenu } from "./UserMenu";
 
 export interface DashboardShellProps {
@@ -48,6 +49,7 @@ export function DashboardShell({ children, email, workspaceName }: DashboardShel
         />
 
         <main className="flex-1 bg-app p-4 sm:p-6 lg:p-8">{children}</main>
+        <SiteFooter />
       </div>
     </div>
   );

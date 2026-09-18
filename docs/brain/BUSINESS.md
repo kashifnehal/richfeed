@@ -1,6 +1,6 @@
 ---
 title: RichFeed — Business
-last_updated: 2026-08-28
+last_updated: 2026-09-18
 status: living document — update this file whenever positioning, blockers, or business-model thinking changes
 ---
 
@@ -24,14 +24,20 @@ Not decided yet; flagged here only so it isn't lost. Competitor pricing anchors 
 
 ## Platform approval blockers (Track A — external, file-and-wait)
 
-Four of six real blockers — Meta Advanced Access, TikTok's content-posting audit, Pinterest Standard Access, and Meta's Threads App Review — all require the same two prerequisites before you can even submit: (1) a live, public Privacy Policy + Terms of Service page, and (2) a working demo of the real OAuth-connect-and-publish flow, often as a screen recording. Neither is platform-specific, which is why the fastest way to unblock four queues at once was to ship one small thing first: the policy page, plus a minimal working version of the product on a platform that needs no review at all (LinkedIn personal-profile).
+Four of six real blockers — Meta Advanced Access, TikTok's content-posting audit, Pinterest Standard Access, and Meta's Threads App Review — all require the same two prerequisites before you can even submit: (1) a live, public Privacy Policy + Terms of Service page, and (2) a working demo of the real OAuth-connect-and-publish flow, often as a screen recording. Prerequisite (1) shipped 2026-09-18:
+
+- Privacy Policy: `https://richfeed.social/privacy`
+- Terms of Service: `https://richfeed.social/terms`
+- Data Deletion Instructions (Meta named-field URL): `https://richfeed.social/data-deletion`
+
+TikTok and Pinterest are permanently out of scope; those two rows stay in the table only as historical blockers. The remaining gate for Meta Instagram/Facebook Advanced Access and Threads production is App Review itself (plus Business Verification), not missing policy URLs.
 
 | # | Blocker | Gates | Realistic timeline | Status |
 |---|---|---|---|---|
-| 1 | Meta Business Verification + Advanced Access App Review | Instagram/Facebook posting for accounts other than the operator's own | Verification 1-2+ wks; review itself 4-8+ wks realistic w/ any rejection cycle | Not started |
-| 2 | TikTok Content Posting API audit | Direct Post (true automated public posting) | "Several days to two weeks" per TikTok, budget 2-4+ wks incl. resubmission | Not started |
-| 3 | Pinterest Standard Access | Public (non-sandboxed) Pins | 3-4+ wks, no official SLA | Not started |
-| 4 | Meta Threads App Review | Production Threads posting for other users | Meta's 2026 guidance: up to ~20 days | Not started |
+| 1 | Meta Business Verification + Advanced Access App Review | Instagram/Facebook posting for accounts other than the operator's own | Verification 1-2+ wks; review itself 4-8+ wks realistic w/ any rejection cycle | Policy URLs live 2026-09-18 (`/privacy` `/terms` `/data-deletion`). Review itself **not started** |
+| 2 | TikTok Content Posting API audit | Direct Post (true automated public posting) | "Several days to two weeks" per TikTok, budget 2-4+ wks incl. resubmission | Permanently out of scope — do not submit |
+| 3 | Pinterest Standard Access | Public (non-sandboxed) Pins | 3-4+ wks, no official SLA | Permanently out of scope — do not submit |
+| 4 | Meta Threads App Review | Production Threads posting for other users | Meta's 2026 guidance: up to ~20 days | Policy URLs live 2026-09-18. Review itself **not started** |
 | 5 | LinkedIn Company Page Partner Program | Posting to LinkedIn Company Pages (personal-profile posting needs no approval at all) | No official SLA; independent estimates 4-8 wks best case, 3-4 months typical; favors applicants with an already-shipped product | Deliberately deferred — do not start until Tier-1 platforms are live with real usage to demo |
 | 6 | X/Twitter developer account funding | Any X posting (pay-per-use since Feb 2026, no free tier) | 15 minutes, no review | Project exists but **credits depleted** (real 402 on publish, 2026-09-04) — billing top-up, not a code fix |
 

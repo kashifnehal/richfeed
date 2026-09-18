@@ -660,6 +660,20 @@ Live verify (production worker `3b683ec2`, commit `8ad0678`):
 `https://www.threads.com/@richfeed_social/post/DdbE9jTmxBX` — guest view
 shows the caption and both images side by side.
 
+## 2026-09-18 — Public Privacy Policy, Terms, and Data Deletion pages
+
+What shipped: three public Next.js routes, no auth required:
+`https://richfeed.social/privacy`, `https://richfeed.social/terms`,
+`https://richfeed.social/data-deletion`. Footer links on sign-in / sign-up /
+forgot-password, the dashboard shell, and the legal layout. Copy matches
+real behaviour (encrypted tokens, soft disconnect, 30-day email deletion).
+Contact: `adorablekashif786@gmail.com` (monitored; domain has no MX).
+
+Deviations/known gaps: no self-serve full-account delete button; 30-day
+purge is a manual founder commitment. Disconnect does not wipe tokens or
+cancel queued jobs. No branded `privacy@richfeed.social` until MX/routing
+exists.
+
 ## Template for future entries
 
 ```

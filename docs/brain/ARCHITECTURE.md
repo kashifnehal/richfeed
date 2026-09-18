@@ -3,7 +3,7 @@
 The real, current stack and repo layout. Update this whenever structure, stack,
 or system flow changes.
 
-_Last updated: 2026-09-18 (removed stale `apps/web/e2e/` tree line; CLAUDE.md is now a redirect to AGENTS.md; shared media capability matrix)._
+_Last updated: 2026-09-18 (public legal pages at `/privacy`, `/terms`, `/data-deletion`)._
 
 ## Stack
 
@@ -34,6 +34,7 @@ richfeed/
 │   │   │   │   ├── layout.tsx     dashboard shell (Sidebar + Topbar)
 │   │   │   │   ├── posts/new/     Compose
 │   │   │   │   └── posts/[postId]/  Post detail / edit
+│   │   │   ├── (legal)/           public Privacy, Terms, Data Deletion (no auth)
 │   │   │   ├── layout.tsx
 │   │   │   └── globals.css
 │   │   ├── components/
@@ -42,12 +43,12 @@ richfeed/
 │   │   │   │                      ScheduleTimePicker, TargetRow, CalendarPostChip,
 │   │   │   │                      DuplicateDialog, FilterBar
 │   │   │   └── shared/            DashboardShell, ConfirmDialog, Toast, NotificationBell,
-│   │   │                         UserMenu, Input
+│   │   │                         UserMenu, Input, SiteFooter, LegalArticle
 │   │   ├── lib/
 │   │   │   ├── supabase/          client.ts (browser), server.ts (SSR)
 │   │   │   ├── api.ts             typed fetch wrapper to apps/api
-│   │   │   └── …                  account-status, calendar, nav, platform, queue-rows, status
-│   │   └── middleware.ts          session refresh + route protection for (dashboard)
+│   │   │   └── …                  account-status, calendar, nav, platform, queue-rows, status, legal
+│   │   └── middleware.ts          session refresh + dashboard protection; `/privacy` `/terms` `/data-deletion` are public
 │   └── api/
 │       └── src/
 │           ├── server.ts          Fastify app
