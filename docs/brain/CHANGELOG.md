@@ -660,7 +660,7 @@ Live verify (production worker `3b683ec2`, commit `8ad0678`):
 `https://www.threads.com/@richfeed_social/post/DdbE9jTmxBX` — guest view
 shows the caption and both images side by side.
 
-## 2026-09-18 — Public Privacy Policy, Terms, and Data Deletion pages
+## 2026-09-18 — Public Privacy Policy, Terms, and Data Deletion pages (commit 11796b0)
 
 What shipped: three public Next.js routes, no auth required:
 `https://richfeed.social/privacy`, `https://richfeed.social/terms`,
