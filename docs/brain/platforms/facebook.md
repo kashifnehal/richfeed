@@ -110,6 +110,12 @@ Unpublished photos expire ~24h if never attached; the feed call happens
 immediately after the uploads so that window is not a product concern.
 `platformPostId` for the carousel is the feed post `id` (`{pageId}_{postId}`).
 
+**Carousel live-verified 2026-09-18:** `post_target` `155edec2-…`
+`status=published`, `platform_post_id=1265025103369551_122110621161457841`,
+permalink redirected to `permalink.php?story_fbid=pfbid0qAEP…`. Logged-in
+Facebook showed **RichFeed's post** with both images side by side and
+caption "RichFeed carousel live check — Facebook, 18 Sep 2026."
+
 ## `needs_reconnect` trigger condition
 
 Same Meta-family check as Instagram/Threads — see `platforms/meta-shared.ts`.

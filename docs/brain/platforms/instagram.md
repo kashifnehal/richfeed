@@ -126,3 +126,7 @@ the account to `needs_reconnect`.
   was `null`, so the Reel used the post caption. Same post's YouTube target
   also published (see `platforms/youtube.md` — title was wrong for a
   different reason).
+- **Carousel live-verified 2026-09-18.** `post_target` `a2bce631-…` →
+  `status=published`, `platform_post_id=17868636339648974`, permalink
+  `https://www.instagram.com/p/DdbECMTmyVe/` (feed `/p/`, not `/reel/`).
+  Guest view: `@richfeed_social`, caption, first image, two carousel dots.

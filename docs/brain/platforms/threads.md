@@ -113,3 +113,17 @@ Opened that URL without a Threads login: page title and thread body
 show the caption on `@richfeed_social`, posted ~4 minutes earlier.
 Anonymous curl of the same URL is 200 but JS-rendered (title "Threads")
 — use Graph or a real browser, not raw curl, to read the body.
+
+## First live carousel (2026-09-18)
+
+First attempt `d34cf411-…` failed at parent create: Graph 400
+`error_subcode=4279004` "Invalid Carousel Children" (child
+`18116232160815858` not `FINISHED` yet). After polling children+parent
+to `FINISHED` (commit `8ad0678`):
+
+- `scheduled_posts` `57ae03ba-…`
+- `post_targets.id` `61c8067b-…`
+- `status=published`, `http_status=201`
+- `platform_post_id=18107113022185221`
+- `permalink_url=https://www.threads.com/@richfeed_social/post/DdbE9jTmxBX`
+- guest view: caption + both images side by side on `@richfeed_social`

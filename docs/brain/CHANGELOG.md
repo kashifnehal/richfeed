@@ -637,9 +637,13 @@ Live verify (production worker `234c8b0a`, commit `22bc035`):
 
 Deviations/known gaps: mixed image+video carousel is not in this pass
 (compose still rejects mixed). X excluded (billing pause). No per-image
-alt text. Threads first live attempt failed (see next entry).
+alt text. Threads first live attempt failed (see next entry). Production
+`POST https://richfeed-api-production.up.railway.app/api/posts` 400s
+carousel→YouTube (`"YouTube only supports video posts."`) and 11-image
+carousel→Instagram (`"Instagram carousel posts need between 2 and 10
+images."`).
 
-## 2026-09-18 — Threads carousel: poll children before parent (commit PENDING)
+## 2026-09-18 — Threads carousel: poll children before parent (commit 8ad0678)
 
 What shipped: first Threads carousel (`d34cf411-…`) 400'd at parent create
 with `error_subcode=4279004` "Invalid Carousel Children" (child
@@ -647,7 +651,14 @@ with `error_subcode=4279004` "Invalid Carousel Children" (child
 `GET /{container-id}?fields=status` until `FINISHED` on each child and the
 parent before `/threads_publish`. Single-image/text 30s delay is unchanged.
 
-Deviations/known gaps: live retry pending worker deploy of this commit.
+Deviations/known gaps: none for the retry. First attempt `d34cf411-…`
+remains failed (not republished). Single-image/text still uses the 30s
+delay and does not poll.
+
+Live verify (production worker `3b683ec2`, commit `8ad0678`):
+`61c8067b-…` published `18107113022185221`, permalink
+`https://www.threads.com/@richfeed_social/post/DdbE9jTmxBX` — guest view
+shows the caption and both images side by side.
 
 ## Template for future entries
 

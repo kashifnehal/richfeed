@@ -72,6 +72,12 @@ product and is not used — confirmed against the MultiImage API docs
   `urn:li:share:7502128201083551745` ("post2 [RichFeed]") resolves the
   same way. Treat a future 404 as unexpected now, not "expected-possible."
 
+**Carousel live-verified 2026-09-18:** `post_target` `aab015ee-…`
+`status=published`, `platform_post_id=urn:li:ugcPost:7506637615413153792`
+(ugcPost, not share — MultiImage uses ugcPost), permalink
+`https://www.linkedin.com/feed/update/urn:li:ugcPost:7506637615413153792/`.
+Guest view: author **Rich Feed**, caption, two-image carousel `1 / 2`.
+
 ## `needs_reconnect` trigger condition
 
 401/403 from any LinkedIn call. No refresh path exists (see OAuth section
