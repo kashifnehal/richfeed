@@ -611,7 +611,7 @@ a copyright-omit case).
 Deviations/known gaps: none for this step. 60-day token refresh job
 still not built.
 
-## 2026-09-18 — Carousel / multi-image adapters (commit PENDING)
+## 2026-09-18 — Carousel / multi-image adapters (commit ed231d9)
 
 What shipped: `PLATFORM_MEDIA_CAPS` now has `carousel: true` for LinkedIn,
 Facebook Pages, Instagram, and Threads (X and YouTube untouched). Compose
