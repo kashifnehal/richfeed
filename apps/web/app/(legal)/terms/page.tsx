@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LegalArticle } from "../../components/shared/LegalArticle";
-import { PRIVACY_CONTACT_EMAIL, SITE_ORIGIN } from "../../lib/legal";
+import { LegalArticle } from "../../../components/shared/LegalArticle";
+import { PRIVACY_CONTACT_EMAIL, SITE_ORIGIN } from "../../../lib/legal";
 
 export const metadata: Metadata = {
   title: "Terms of Service — RichFeed",
