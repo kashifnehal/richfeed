@@ -682,7 +682,7 @@ under `app/`) instead of `../../../`. Fixed and redeployed. Live verify
 below is against this commit (`dpl_CDjj5TrQFcR4UkZ1NVjT464NRpJJ`, READY,
 aliased to `richfeed.social`).
 
-## 2026-10-10 — Railway cost cut + Supabase keep-alive; stale overdue targets failed
+## 2026-10-10 — Railway cost cut + Supabase keep-alive; stale overdue targets failed (commit 6fc11e4)
 
 What shipped: Railway was paused by the founder on ~2026-10-08 to stop
 credit burn. The cause was idle always-on RAM, not a code leak. 7-day
@@ -706,6 +706,15 @@ Deviations/known gaps: the Vercel cron's registration can only be confirmed
 in the Vercel dashboard (Settings → Cron Jobs). The Vercel MCP was not
 authenticated in this session. The free Vercel tier runs crons once a day at
 an imprecise minute.
+
+Live verify (2026-10-10): Railway deploys of `6fc11e4` are worker
+`42804283` and API `3b8cdf6c`. Both are SUCCESS and Online. The worker log
+shows `[worker] supabase heartbeat ok` at 12:35:58Z. `richfeed-api` config
+still has `sleepApplication: true`, and `GET /health` returns 200.
+`GET https://richfeed.social/api/keepalive` returns 200
+`{"status":"ok"}` on Vercel production. After the worker restart,
+`post_targets` are failed 31, published 23, needs_reconnect 1, with no new
+publish attempts.
 
 ## Template for future entries
 
