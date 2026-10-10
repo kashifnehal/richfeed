@@ -682,6 +682,31 @@ under `app/`) instead of `../../../`. Fixed and redeployed. Live verify
 below is against this commit (`dpl_CDjj5TrQFcR4UkZ1NVjT464NRpJJ`, READY,
 aliased to `richfeed.social`).
 
+## 2026-10-10 — Railway cost cut + Supabase keep-alive; stale overdue targets failed
+
+What shipped: Railway was paused by the founder on ~2026-10-08 to stop
+credit burn. The cause was idle always-on RAM, not a code leak. 7-day
+averages were 0.24 GB API and 0.21 GB worker, with CPU near 0. With Railway
+off, Supabase sent its free-tier "inactive for 7 days, will be paused"
+warning. Changes:
+`richfeed-api` switched to Railway Serverless (dashboard setting, mirrored in
+`railway.json`) and redeployed. The worker gets a 12-hourly Supabase heartbeat
+query in `worker-entry.ts`. New `apps/web/app/api/keepalive/route.ts` and
+`apps/web/vercel.json` add a daily Vercel cron that queries Supabase
+independently of Railway. Before restarting the worker, 15 `post_targets`
+whose `publish_at` had already passed while the worker was offline were set to
+`failed`, so the worker would not publish them weeks late. They were in
+`pending`/`queued`/`publishing`; most were demo seed rows, plus a few real
+early-September IG/X tests. Each got a `publish_attempts` row saying why
+(`PUBLISH_FAILED`, "scheduled time passed while the RichFeed publishing
+service was offline… Use Fix and reschedule"). After that, no target is in
+`pending`/`queued`/`publishing`.
+
+Deviations/known gaps: the Vercel cron's registration can only be confirmed
+in the Vercel dashboard (Settings → Cron Jobs). The Vercel MCP was not
+authenticated in this session. The free Vercel tier runs crons once a day at
+an imprecise minute.
+
 ## Template for future entries
 
 ```

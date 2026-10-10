@@ -93,6 +93,8 @@ Verified live against Railway MCP + `GET https://richfeed-api-production.up.rail
 
 Both services deploy from `kashifnehal/richfeed@main`, commit **`2716e3d`** (same as local `main` / `origin/main` at check time). Public API host: `https://richfeed-api-production.up.railway.app`. No staged changes, no volumes/buckets. Last 24h API HTTP: 20 requests, 0 4xx, 0 5xx. Last 24h memory ~0.27 GB API / ~0.22 GB worker, CPU idle. Worker runtime logs were empty in the fetch window (idle consumer is expected); liveness is from Railway replica status + memory, not from a job-processing log line.
 
+**Since 2026-10-10 (cost + keep-alive setup, see `DECISIONS.md`):** `richfeed-api` has Railway Serverless on (`sleepApplication: true`). It sleeps when idle and wakes on the first request, which can be slow or 502 once. `richfeed-worker` stays always-on. Supabase free-tier keep-alive runs in two places: a 12-hourly `workspaces` query in `apps/api/src/worker-entry.ts` (logs `[worker] supabase heartbeat ok`), and a daily Vercel cron (`apps/web/vercel.json`, 06:00 UTC) calling `GET /api/keepalive` (`apps/web/app/api/keepalive/route.ts`, anon-key query). If the optional `CRON_SECRET` env var is set on Vercel, the route requires it.
+
 The 2026-09-04 usage-audit note that one service was crashed and the other missing runtime secrets is **stale**. Both are Online; `richfeed-api` has 27 env vars including `SUPABASE_*`, `UPSTASH_REDIS_URL`, `TOKEN_ENCRYPTION_KEY`, `FRONTEND_ORIGIN`, and the six platform OAuth sets. Do not dump those values into this file.
 
 ## Data model

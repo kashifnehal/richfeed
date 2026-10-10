@@ -292,3 +292,16 @@ verified request**. There is no automated purge job; the founder has to do
 it by hand (auth user, posts, media, tokens, workspace). Disconnect still
 does not cancel already-queued publishes — the Data Deletion page says so
 explicitly rather than pretending it does.
+
+## 2026-10-10 — Stay on free/Hobby tiers: API sleeps, worker always-on, two Supabase keep-alives
+
+Railway credits were burning on idle always-on RAM (~0.24 GB API + ~0.21 GB
+worker, CPU ~0), so the founder paused the project; with Railway off,
+Supabase's free tier flagged the database for its 7-days-idle pause. Decision:
+no paid upgrades. `richfeed-api` runs with Railway Serverless (sleeps when
+idle, wakes on the first request — first call after sleep can be slow or 502
+once). `richfeed-worker` stays always-on, because a sleeping worker can't
+fire delayed BullMQ jobs. Supabase is kept active by two independent pings:
+a 12-hourly query in the worker (`worker-entry.ts`) and a daily Vercel cron
+hitting `richfeed.social/api/keepalive`, so it survives Railway being paused
+again. Upstash stays active through the worker's normal BullMQ polling.
